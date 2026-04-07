@@ -1,0 +1,20 @@
+camera:
+  index: 0
+  width: 1280
+  height: 720
+  fps: 30
+
+game:
+  num_decks: 6          # 1, 2, 4, 6 u 8
+  num_players: 2        # 1-7
+  counting_system: hilo # hilo | ko | omega2
+
+detection:
+  model_path: models/cards_yolov8.pt
+  confidence: 0.7
+  iou: 0.45
+  inference_fps: 15
+
+api:
+  host: 0.0.0.0
+  port: 8000

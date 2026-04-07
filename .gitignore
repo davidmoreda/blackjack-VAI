@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.pt
+*.pth
+dataset/raw/
+dataset/roboflow/
+models/runs/
+.env
+*.egg-info/
+dist/
+build/
+.DS_Store
