@@ -37,10 +37,11 @@ class CardCounter:
         self.total_cards = num_decks * 52
 
     def register(self, label: str):
-        """Registra una carta vista (label tipo 'AS', 'KH')."""
-        if label == "card_back":
+        """Registra una carta vista. Acepta labels YOLO tipo 'A Spades', '10 Clubs', 'J Hearts'."""
+        if label in ("card_back", "Cards", "Joker", "joker"):
             return
-        value = label[:-1]
+        # Extraer valor: "A Spades" → "A", "10 Clubs" → "10"
+        value = label.split()[0] if " " in label else label
         delta = self.system.get(value, 0)
         self.running_count += delta
         self.cards_seen += 1

@@ -1,20 +1,39 @@
 camera:
-  index: 0
+  index: 'http://172.31.64.1:5050/video'
   width: 1280
   height: 720
   fps: 30
 
 game:
-  num_decks: 6          # 1, 2, 4, 6 u 8
+  num_decks: 1          # 1, 2, 4, 6 u 8
   num_players: 2        # 1-7
   counting_system: hilo # hilo | ko | omega2
 
 detection:
-  model_path: models/cards_yolov8.pt
-  confidence: 0.7
+  model_path: models/best.pt
+  confidence: 0.75
   iou: 0.45
   inference_fps: 15
 
 api:
   host: 0.0.0.0
   port: 8000
+
+# Zonas de la mesa (fracciones del frame, 0.0–1.0)
+# dealer: parte superior | player_1: inferior-izquierda | player_2: inferior-derecha
+zones:
+  dealer:
+    x: 0.0
+    y: 0.0
+    w: 1.0
+    h: 0.40
+  player_1:
+    x: 0.0
+    y: 0.40
+    w: 0.50
+    h: 0.60
+  player_2:
+    x: 0.50
+    y: 0.40
+    w: 0.50
+    h: 0.60

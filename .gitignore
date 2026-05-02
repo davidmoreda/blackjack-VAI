@@ -1,12 +1,31 @@
 __pycache__/
 *.py[cod]
-*.pt
-*.pth
-dataset/raw/
-dataset/roboflow/
-models/runs/
-.env
 *.egg-info/
 dist/
 build/
 .DS_Store
+.env
+
+# Modelos entrenados — excluir todos salvo el best final (gestionado por LFS)
+*.pt
+*.pth
+*.onnx
+*.torchscript
+!models/best.pt
+
+# Archivos de entorno grandes
+mlflow.db
+mlruns/
+
+# Datasets descargados de Roboflow
+BlackjackVAI-*/
+dataset/raw/
+dataset/roboflow/
+
+# Runs de entrenamiento YOLO
+training_runs/
+
+# MLflow (solo excluir duplicado de runs/)
+
+# Jupyter checkpoints
+.ipynb_checkpoints/

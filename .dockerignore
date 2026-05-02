@@ -1,0 +1,34 @@
+# Dataset descargado de Roboflow (cientos de MB)
+BlackjackVAI-*/
+dataset/
+
+# Runs de entrenamiento y checkpoints
+training_runs/
+mlruns/
+
+# Modelos (se montan como volumen en docker-compose)
+models/
+*.pt
+*.pth
+*.onnx
+
+# Notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Entorno de desarrollo
+.env
+.vscode/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Git
+.git/
+.gitignore
+
+# Docs y miscelánea
+docs/
+README.md
+*.txt
+h.txt

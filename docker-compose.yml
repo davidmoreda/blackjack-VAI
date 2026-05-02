@@ -1,0 +1,33 @@
+services:
+  blackjack-vai:
+    build: .
+    image: blackjack-vai:latest
+    ports:
+      # host:contenedor — el navegador abre http://localhost:8000
+      - "8000:8000"
+    volumes:
+      # El modelo entrenado se monta como lectura para no incluirlo
+      # en la imagen (son ~50 MB y cambia con cada entrenamiento).
+      - ./models:/app/models:ro
+      # config.yaml también se monta para poder cambiar parámetros
+      # (confianza, número de mazos, etc.) sin reconstruir la imagen.
+      - ./config.yaml:/app/config.yaml:ro
+    devices:
+      # Webcam — Linux expone /dev/video0, /dev/video1, ...
+      # Añade más líneas si tienes varias cámaras y quieres elegir.
+      - /dev/video0:/dev/video0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            # Pasa todas las GPUs NVIDIA al contenedor.
+            # Requiere NVIDIA Container Toolkit instalado en el host.
+            # Si no tienes GPU o no lo tienes instalado, comenta
+            # este bloque y el modelo correrá en CPU (más lento).
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    environment:
+      # Evita que ultralytics busque actualizaciones en cada arranque
+      - YOLO_AUTOINSTALL=false
