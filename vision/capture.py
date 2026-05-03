@@ -20,7 +20,7 @@ class CameraCapture:
             self._thread = threading.Thread(target=self._read_mjpeg_loop, daemon=True)
             self._thread.start()
         else:
-            self.cap = cv2.VideoCapture(source)
+            self.cap = cv2.VideoCapture(source, cv2.CAP_DSHOW)
             self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
             self.cap.set(cv2.CAP_PROP_FRAME_WIDTH,  cfg["width"])
             self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cfg["height"])

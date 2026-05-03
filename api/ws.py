@@ -42,6 +42,7 @@ def init(config: dict):
     _game_sm = BlackjackStateMachine(
         num_players=gcfg.get("num_players", 1),
         counter=counter,
+        num_decks=gcfg.get("num_decks", 6),
     )
 
 

@@ -10,10 +10,16 @@ CARD_VALUES = {
 }
 
 
+def _label_value(label: str) -> str:
+    """Extrae el valor de un label YOLO: 'A Spades' -> 'A', '10 Clubs' -> '10'."""
+    return label.split()[0] if " " in label else label
+
+
 def card_value(label: str) -> int:
-    """Devuelve el valor numerico de una carta (label tipo 'AS', 'KH', '10D')."""
-    value = label[:-1] if label != "card_back" else "0"
-    return CARD_VALUES.get(value, 0)
+    """Devuelve el valor numerico de una carta (label tipo 'A Spades', 'K Hearts', '10 Clubs')."""
+    if label in ("card_back", "Cards", "Joker", "joker"):
+        return 0
+    return CARD_VALUES.get(_label_value(label), 0)
 
 
 def hand_total(cards: List[str]) -> int:
@@ -22,7 +28,7 @@ def hand_total(cards: List[str]) -> int:
     aces = 0
     for card in cards:
         v = card_value(card)
-        if card[:-1] == "A":
+        if _label_value(card) == "A":
             aces += 1
         total += v
     while total > 21 and aces:

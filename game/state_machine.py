@@ -5,11 +5,12 @@ Estados: WAITING | DEALING | PLAYER_TURN | DEALER_TURN | ROUND_END
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 from game.engine import hand_total, is_bust, is_blackjack, dealer_should_hit
 from game.counter import CardCounter
-from game.strategy import suggest_action
+from game.deck_tracker import DeckTracker, label_to_value
+from game.strategy import suggest_action, suggest_action_with_ev
 
 # Estas clases pueden aparecer varias veces en la misma sesion/ronda
 REPEATABLE_LABELS: Set[str] = {"Joker", "joker", "Cards", "card_back"}
@@ -43,9 +44,10 @@ class PlayerHand:
 
 
 class BlackjackStateMachine:
-    def __init__(self, num_players: int, counter: CardCounter):
+    def __init__(self, num_players: int, counter: CardCounter, num_decks: int = 6):
         self.num_players = num_players
         self.counter = counter
+        self.deck = DeckTracker(num_decks=num_decks)
         self.state = GameState.WAITING
         self.game_active = False
         self.dealer_hand = PlayerHand("dealer")
@@ -57,6 +59,12 @@ class BlackjackStateMachine:
         self.player_ids = list(self.player_hands.keys())
         # Cartas ya registradas esta ronda (evita contar la misma carta varias veces por frame)
         self._seen_this_round: Set[str] = set()
+        # Historial cronologico (zone, card) — incluye cartas de rondas previas del mismo zapato
+        self.history: List[Tuple[str, str]] = []
+        # Sugerencias cacheadas — se invalidan cada vez que cambia el estado.
+        # Evita recalcular EV (caro) en cada frame del bucle de render.
+        self._suggestions: Dict[str, Tuple[Optional[str], Optional[dict]]] = {}
+        self._suggestions_dirty = True
 
     @property
     def current_player(self) -> Optional[str]:
@@ -65,17 +73,21 @@ class BlackjackStateMachine:
         return None
 
     def start_game(self):
-        """Inicia una nueva partida completa — resetea contador y historial."""
+        """Inicia una nueva partida completa — resetea contador, zapato e historial."""
         self.game_active = True
         self.state = GameState.DEALING
         self.counter.reset()
+        self.deck.reset()
         self._seen_this_round = set()
+        self.history = []
         self.dealer_hand = PlayerHand("dealer")
         self.player_hands = {
             f"player_{i+1}": PlayerHand(f"player_{i+1}")
             for i in range(self.num_players)
         }
         self.current_player_idx = 0
+        self._suggestions = {}
+        self._suggestions_dirty = True
 
     def add_card(self, zone: str, card: str):
         """
@@ -86,17 +98,57 @@ class BlackjackStateMachine:
             return  # ya contada, no duplicar
         self._seen_this_round.add(card)
         self.counter.register(card)
+        self.deck.remove(card)
+        self.history.append((zone, card))
         if zone == "dealer":
             if card not in self.dealer_hand.cards:
                 self.dealer_hand.cards.append(card)
         elif zone in self.player_hands:
             if card not in self.player_hands[zone].cards:
                 self.player_hands[zone].cards.append(card)
+        self._suggestions_dirty = True
+
+    def remove_card(self, index: int) -> bool:
+        """
+        Elimina una carta del historial (por mala deteccion). Refunde el contador
+        y devuelve la carta al zapato. `index` es la posicion en `self.history`.
+        """
+        if index < 0 or index >= len(self.history):
+            return False
+        zone, card = self.history.pop(index)
+
+        # Devolver al zapato
+        self.deck.restore(card)
+
+        # Revertir contador (delta opuesto)
+        v = label_to_value(card)
+        if v is not None:
+            delta = self.counter.system.get(v, 0)
+            self.counter.running_count -= delta
+            self.counter.cards_seen = max(0, self.counter.cards_seen - 1)
+
+        # Quitar de la mano si sigue ahi
+        if zone == "dealer" and card in self.dealer_hand.cards:
+            self.dealer_hand.cards.remove(card)
+        elif zone in self.player_hands and card in self.player_hands[zone].cards:
+            self.player_hands[zone].cards.remove(card)
+
+        # Permitir que vuelva a registrarse si reaparece
+        self._seen_this_round.discard(card)
+        self._suggestions_dirty = True
+        return True
+
+    def undo_last(self) -> bool:
+        """Atajo: borra la ultima carta registrada."""
+        if not self.history:
+            return False
+        return self.remove_card(len(self.history) - 1)
 
     def player_stand(self, player_id: str):
         if player_id in self.player_hands:
             self.player_hands[player_id].stood = True
             self._advance_turn()
+            self._suggestions_dirty = True
 
     def _advance_turn(self):
         self.current_player_idx += 1
@@ -113,28 +165,44 @@ class BlackjackStateMachine:
             for i in range(self.num_players)
         }
         self.current_player_idx = 0
+        self._suggestions = {}
+        self._suggestions_dirty = True
 
     def reset(self):
         """Alias de reset_round para compatibilidad con routes.py."""
         self.reset_round()
 
+    def _refresh_suggestions(self):
+        """Recalcula sugerencias y EVs para todos los jugadores. Se llama solo
+        cuando algo del estado cambia, no cada frame."""
+        self._suggestions = {}
+        if not self.dealer_hand.cards:
+            self._suggestions_dirty = False
+            return
+        dealer_upcard = self.dealer_hand.cards[0]
+        for pid, hand in self.player_hands.items():
+            if hand.bust or hand.stood or len(hand.cards) < 2:
+                self._suggestions[pid] = (None, None)
+            else:
+                self._suggestions[pid] = suggest_action_with_ev(
+                    hand.cards, dealer_upcard, self.deck
+                )
+        self._suggestions_dirty = False
+
     def to_dict(self) -> dict:
-        # Si no hay carta del dealer visible, asumimos 10 (estrategia conservadora)
-        dealer_upcard = self.dealer_hand.cards[0] if self.dealer_hand.cards else "10 Spades"
+        if self._suggestions_dirty:
+            self._refresh_suggestions()
         players = {}
         for pid, hand in self.player_hands.items():
-            suggestion = (
-                suggest_action(hand.cards, dealer_upcard)
-                if not hand.bust and not hand.stood
-                else None
-            )
+            sug, evs = self._suggestions.get(pid, (None, None))
             players[pid] = {
                 "cards": hand.cards,
                 "total": hand.total,
                 "bust": hand.bust,
                 "blackjack": hand.blackjack,
                 "stood": hand.stood,
-                "suggestion": suggestion,
+                "suggestion": sug,
+                "evs": evs,
             }
         return {
             "state": self.state.value,
@@ -146,5 +214,7 @@ class BlackjackStateMachine:
             },
             "players": players,
             "counting": self.counter.state(),
+            "deck": self.deck.state(),
+            "history": [{"zone": z, "card": c} for z, c in self.history],
             "seen_cards": sorted(self._seen_this_round),
         }

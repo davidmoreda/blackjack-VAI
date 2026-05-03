@@ -2,7 +2,13 @@
 Basic Strategy: accion optima para cada mano.
 Acepta labels YOLO: 'A Spades', '10 Hearts', 'K Clubs', etc.
 Acciones: HIT | STAND | DOUBLE | SPLIT | WAIT
+
+Tambien expone `suggest_action_with_ev()` que usa el calculador EV dinamico
+si se le pasa un DeckTracker — devuelve la accion con mayor valor esperado
+en lugar de leer de la tabla estatica.
 """
+
+from typing import Tuple
 
 from game.engine import hand_total
 
@@ -86,3 +92,36 @@ def _pair_strategy(val: str, dealer: int) -> str:
     if val == "6" and dealer <= 6:           return "SPLIT"
     if val == "9" and dealer not in (7, 10, 11): return "SPLIT"
     return "HIT"
+
+
+def suggest_action_with_ev(
+    player_cards: list,
+    dealer_upcard: str | None,
+    deck_tracker=None,
+) -> Tuple[str, dict | None]:
+    """
+    Devuelve (accion_recomendada, dict_EVs).
+
+    Si `deck_tracker` esta presente, calcula EV dinamico real basado en la
+    composicion residual del zapato. En caso contrario, usa la tabla basica
+    y devuelve evs=None.
+
+    El EV se devuelve como dict {"STAND": 0.12, "HIT": -0.04, "DOUBLE": ...}.
+    """
+    if len(player_cards) < 2 or dealer_upcard is None:
+        return "WAIT", None
+
+    # Las parejas se siguen rigiendo por la tabla porque el EV de SPLIT
+    # requiere modelar dos manos independientes (ampliable en el futuro).
+    if _is_pair(player_cards):
+        return suggest_action(player_cards, dealer_upcard), None
+
+    if deck_tracker is None:
+        return suggest_action(player_cards, dealer_upcard), None
+
+    from game.ev_calculator import evaluate, best_action
+
+    evs = evaluate(player_cards, dealer_upcard, deck_tracker, can_double=True)
+    if not evs:
+        return suggest_action(player_cards, dealer_upcard), None
+    return best_action(evs), evs
