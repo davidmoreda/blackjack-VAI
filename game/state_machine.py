@@ -65,6 +65,11 @@ class BlackjackStateMachine:
         # Evita recalcular EV (caro) en cada frame del bucle de render.
         self._suggestions: Dict[str, Tuple[Optional[str], Optional[dict]]] = {}
         self._suggestions_dirty = True
+        # Marcador de la partida actual: rondas ganadas por dealer/jugadores
+        # y empates por jugador. Se resetea con `start_game`, NO con reset_round.
+        self.wins: Dict[str, int] = {"dealer": 0, **{pid: 0 for pid in self.player_ids}}
+        self.pushes: Dict[str, int] = {pid: 0 for pid in self.player_ids}
+        self.rounds_played: int = 0
 
     @property
     def current_player(self) -> Optional[str]:
@@ -73,7 +78,7 @@ class BlackjackStateMachine:
         return None
 
     def start_game(self):
-        """Inicia una nueva partida completa — resetea contador, zapato e historial."""
+        """Inicia una nueva partida completa — resetea contador, zapato, historial y marcador."""
         self.game_active = True
         self.state = GameState.DEALING
         self.counter.reset()
@@ -88,6 +93,10 @@ class BlackjackStateMachine:
         self.current_player_idx = 0
         self._suggestions = {}
         self._suggestions_dirty = True
+        # Reset del marcador (partida nueva)
+        self.wins = {"dealer": 0, **{pid: 0 for pid in self.player_ids}}
+        self.pushes = {pid: 0 for pid in self.player_ids}
+        self.rounds_played = 0
 
     def add_card(self, zone: str, card: str):
         """
@@ -155,8 +164,44 @@ class BlackjackStateMachine:
         if self.current_player_idx >= len(self.player_ids):
             self.state = GameState.DEALER_TURN
 
+    def _finalize_round(self) -> bool:
+        """
+        Evalua la ronda actual y suma al marcador. Solo cuenta si hay datos
+        suficientes (dealer y al menos un jugador con >=2 cartas).
+        Devuelve True si se sumo algo.
+        """
+        if len(self.dealer_hand.cards) < 2:
+            return False
+        any_scored = False
+        d_total = self.dealer_hand.total
+        d_bust  = self.dealer_hand.bust
+        d_bj    = self.dealer_hand.blackjack
+
+        for pid, hand in self.player_hands.items():
+            if len(hand.cards) < 2:
+                continue
+            any_scored = True
+            if hand.bust:
+                self.wins["dealer"] += 1
+            elif d_bust:
+                self.wins[pid] += 1
+            elif hand.blackjack and not d_bj:
+                self.wins[pid] += 1
+            elif d_bj and not hand.blackjack:
+                self.wins["dealer"] += 1
+            elif hand.total > d_total:
+                self.wins[pid] += 1
+            elif hand.total < d_total:
+                self.wins["dealer"] += 1
+            else:
+                self.pushes[pid] += 1
+        if any_scored:
+            self.rounds_played += 1
+        return any_scored
+
     def reset_round(self):
-        """Nueva ronda — limpia manos y cartas vistas, pero conserva el running count del zapato."""
+        """Nueva ronda — evalua marcador, limpia manos. Conserva el zapato."""
+        self._finalize_round()
         self.state = GameState.DEALING
         self._seen_this_round = set()
         self.dealer_hand = PlayerHand("dealer")
@@ -217,4 +262,10 @@ class BlackjackStateMachine:
             "deck": self.deck.state(),
             "history": [{"zone": z, "card": c} for z, c in self.history],
             "seen_cards": sorted(self._seen_this_round),
+            "score": {
+                "dealer": self.wins["dealer"],
+                "players": {pid: self.wins[pid] for pid in self.player_ids},
+                "pushes": dict(self.pushes),
+                "rounds": self.rounds_played,
+            },
         }

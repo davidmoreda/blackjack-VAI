@@ -5,6 +5,22 @@ import numpy as np
 from typing import Optional
 
 
+def build_zones(num_players: int) -> dict:
+    """
+    Genera dealer arriba (40% altura, ancho completo) + N columnas iguales para
+    los jugadores en el 60% inferior. Util para que cambiar `num_players` en
+    settings actualice la geometria sin tocar config.yaml.
+    """
+    n = max(1, int(num_players))
+    zones = {"dealer": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 0.4}}
+    width = 1.0 / n
+    for i in range(n):
+        zones[f"player_{i+1}"] = {
+            "x": i * width, "y": 0.4, "w": width, "h": 0.6,
+        }
+    return zones
+
+
 class ZoneManager:
     def __init__(self, zones_cfg: dict):
         # zones_cfg: {zone_name: {x, y, w, h}} en fracciones [0,1] del frame

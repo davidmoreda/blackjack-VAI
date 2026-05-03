@@ -45,240 +45,167 @@
       flex-shrink: 0;
       z-index: 10;
     }
-    #header-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    #header-logo .suits {
-      font-size: 1.2rem;
-      letter-spacing: 2px;
-      color: var(--gold);
-    }
+    #header-logo { display: flex; align-items: center; gap: 10px; }
+    #header-logo .suits { font-size: 1.2rem; letter-spacing: 2px; color: var(--gold); }
     #header-logo .suits .red { color: #e05252; }
     #header-title {
       font-family: 'Playfair Display', serif;
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--gold);
-      letter-spacing: 3px;
-      text-transform: uppercase;
+      font-size: 1.25rem; font-weight: 700; color: var(--gold);
+      letter-spacing: 3px; text-transform: uppercase;
     }
     #header-title span {
-      color: var(--text-dim);
-      font-size: 0.7rem;
-      font-family: 'Inter', sans-serif;
-      font-weight: 500;
-      letter-spacing: 2px;
-      margin-left: 8px;
-      vertical-align: middle;
+      color: var(--text-dim); font-size: 0.7rem;
+      font-family: 'Inter', sans-serif; font-weight: 500;
+      letter-spacing: 2px; margin-left: 8px; vertical-align: middle;
     }
-    #header-status {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
+    #header-status { display: flex; align-items: center; gap: 16px; }
     .status-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #4a5568;
-      display: inline-block;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #4a5568; display: inline-block;
     }
     .status-dot.live {
       background: var(--green-pos);
       box-shadow: 0 0 6px var(--green-pos);
       animation: pulse-dot 1.5s ease-in-out infinite;
     }
-    @keyframes pulse-dot {
-      0%,100% { opacity:1; } 50% { opacity:0.4; }
-    }
+    @keyframes pulse-dot { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
     #ws-status {
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--text-dim);
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--text-dim);
     }
     #game-badge {
-      font-size: 0.68rem;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      padding: 3px 10px;
-      border-radius: 20px;
-      border: 1px solid var(--gold-dim);
-      color: var(--text-dim);
-      background: transparent;
-      transition: all 0.3s;
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; padding: 3px 10px; border-radius: 20px;
+      border: 1px solid var(--gold-dim); color: var(--text-dim);
+      background: transparent; transition: all 0.3s;
     }
     #game-badge.active {
-      border-color: var(--green-pos);
-      color: var(--green-pos);
+      border-color: var(--green-pos); color: var(--green-pos);
       background: rgba(74,222,128,0.08);
     }
 
     /* ── MAIN LAYOUT ── */
-    #main {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
+    #main { display: flex; flex: 1; overflow: hidden; }
 
     /* ── CAMERA ── */
-    #camera-panel {
-      flex: 1;
-      position: relative;
-      background: #000;
-    }
-    #camera-feed {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
+    #camera-panel { flex: 1; position: relative; background: #000; }
+    #camera-feed { width: 100%; height: 100%; object-fit: contain; }
     #cam-overlay {
-      position: absolute;
-      bottom: 12px;
-      left: 12px;
-      background: rgba(0,0,0,0.65);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 5px 12px;
-      font-size: 0.7rem;
-      color: var(--text-dim);
-      font-family: 'Roboto Mono', monospace;
-      letter-spacing: 0.5px;
+      position: absolute; bottom: 12px; left: 12px;
+      background: rgba(0,0,0,0.65); border: 1px solid var(--border);
+      border-radius: 6px; padding: 5px 12px;
+      font-size: 0.7rem; color: var(--text-dim);
+      font-family: 'Roboto Mono', monospace; letter-spacing: 0.5px;
     }
 
     /* ── SIDE PANEL ── */
     #side-panel {
-      width: 360px;
-      background: var(--panel);
+      width: 380px; background: var(--panel);
       border-left: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      overflow-y: auto;
-      scrollbar-width: thin;
-      scrollbar-color: var(--gold-dim) transparent;
+      display: flex; flex-direction: column; overflow-y: auto;
+      scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent;
     }
 
-    .section {
-      border-bottom: 1px solid var(--border);
-      padding: 16px 18px;
-    }
+    .section { border-bottom: 1px solid var(--border); padding: 14px 18px; }
     .section-title {
-      font-size: 0.62rem;
-      font-weight: 700;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      color: var(--gold);
-      margin-bottom: 14px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 2.5px;
+      text-transform: uppercase; color: var(--gold);
+      margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
     }
     .section-title::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* ── SCOREBOARD ── */
+    #scoreboard {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 1fr;
+      gap: 10px;
+    }
+    .score-cell {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 8px;
+      text-align: center;
+    }
+    .score-cell.dealer { border-color: rgba(220, 60, 60, 0.4); }
+    .score-cell.player { border-color: rgba(74, 222, 128, 0.4); }
+    .score-cell.push   { border-color: rgba(150, 150, 150, 0.4); }
+    .score-cell-label {
+      font-size: 0.6rem; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--text-dim); margin-bottom: 4px;
+    }
+    .score-cell.dealer .score-cell-label { color: #f87171; }
+    .score-cell.player .score-cell-label { color: var(--green-pos); }
+    .score-cell-val {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 1.6rem; font-weight: 700; color: var(--text);
+    }
+    #rounds-count {
+      text-align: center; font-size: 0.65rem;
+      color: var(--text-dim); margin-top: 8px; letter-spacing: 1px;
     }
 
     /* ── COUNT DISPLAY ── */
     #count-main {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      margin-bottom: 14px;
+      display: flex; justify-content: space-between;
+      align-items: flex-end; margin-bottom: 14px;
     }
     .count-big-label {
-      font-size: 0.65rem;
-      font-weight: 600;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      margin-bottom: 4px;
+      font-size: 0.65rem; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px;
     }
     #running-count {
       font-family: 'Roboto Mono', monospace;
-      font-size: 3.2rem;
-      font-weight: 700;
-      line-height: 1;
-      color: var(--text);
-      transition: color 0.4s;
+      font-size: 3rem; font-weight: 700; line-height: 1;
+      color: var(--text); transition: color 0.4s;
     }
     #running-count.positive { color: var(--green-pos); }
     #running-count.negative { color: var(--red-neg); }
-    #true-count-wrap {
-      text-align: right;
-    }
+    #true-count-wrap { text-align: right; }
     #true-count {
       font-family: 'Roboto Mono', monospace;
-      font-size: 1.9rem;
-      font-weight: 700;
-      color: var(--blue-acc);
+      font-size: 1.8rem; font-weight: 700; color: var(--blue-acc);
     }
 
-    /* Barra de ventaja */
-    .adv-bar-wrap {
-      margin-bottom: 14px;
-    }
+    .adv-bar-wrap { margin-bottom: 14px; }
     .adv-bar-labels {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.6rem;
-      color: var(--text-dim);
-      margin-bottom: 4px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
+      display: flex; justify-content: space-between;
+      font-size: 0.6rem; color: var(--text-dim);
+      margin-bottom: 4px; letter-spacing: 1px; text-transform: uppercase;
     }
     .adv-bar-bg {
-      height: 6px;
-      background: #1a2e1e;
-      border-radius: 3px;
-      overflow: hidden;
+      height: 6px; background: #1a2e1e;
+      border-radius: 3px; overflow: hidden;
       border: 1px solid var(--border);
     }
     #adv-bar-fill {
-      height: 100%;
-      width: 50%;
-      background: var(--text-dim);
-      border-radius: 3px;
+      height: 100%; width: 50%;
+      background: var(--text-dim); border-radius: 3px;
       transition: width 0.5s ease, background 0.5s ease;
     }
 
-    .count-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
+    .count-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .count-cell {
-      background: var(--panel2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 8px 10px;
+      background: var(--panel2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 10px;
     }
     .count-cell-label {
-      font-size: 0.6rem;
-      font-weight: 600;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      margin-bottom: 3px;
+      font-size: 0.6rem; font-weight: 600; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--text-dim); margin-bottom: 3px;
     }
     .count-cell-val {
       font-family: 'Roboto Mono', monospace;
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--text);
+      font-size: 1.05rem; font-weight: 700; color: var(--text);
     }
 
     /* ── SUGGESTION ── */
     #suggestion-box {
-      border-radius: 8px;
-      padding: 14px;
-      text-align: center;
-      background: #1a2e1e;
-      border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px; text-align: center;
+      background: #1a2e1e; border: 1px solid var(--border);
       transition: background 0.3s, border-color 0.3s;
     }
     #suggestion-box.hit    { background: #2d1010; border-color: #e05252; }
@@ -287,159 +214,238 @@
     #suggestion-box.split  { background: #1e0f35; border-color: #a78bfa; }
     #suggestion-box.wait   { background: #1a2e1e; border-color: var(--border); }
     .sug-label {
-      font-size: 0.62rem;
-      font-weight: 600;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--text-dim);
-      margin-bottom: 6px;
+      font-size: 0.62rem; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px;
     }
     #suggestion-action {
       font-family: 'Playfair Display', serif;
-      font-size: 2.2rem;
-      font-weight: 700;
-      letter-spacing: 4px;
+      font-size: 2rem; font-weight: 700; letter-spacing: 4px;
       text-transform: uppercase;
     }
+    #suggestion-ev {
+      margin-top: 8px;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 0.7rem; color: var(--text-dim);
+      letter-spacing: 0.5px;
+    }
+    #suggestion-ev .ev-positive { color: var(--green-pos); }
+    #suggestion-ev .ev-negative { color: var(--red-neg); }
+    #suggestion-ev .ev-best { font-weight: 700; }
 
     /* ── PLAYER BLOCKS ── */
     .player-block {
-      background: var(--panel2);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 12px;
-      margin-bottom: 8px;
+      background: var(--panel2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px 12px; margin-bottom: 8px;
     }
     .player-block.active-player {
       border-color: var(--blue-acc);
       box-shadow: 0 0 0 1px rgba(96,165,250,0.3);
     }
     .player-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 6px;
     }
     .player-name {
-      font-size: 0.62rem;
-      font-weight: 700;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--gold);
+      font-size: 0.62rem; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--gold);
     }
     .player-total-badge {
       font-family: 'Roboto Mono', monospace;
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: var(--text);
+      font-size: 0.85rem; font-weight: 700; color: var(--text);
       background: rgba(255,255,255,0.06);
-      border-radius: 4px;
-      padding: 1px 7px;
+      border-radius: 4px; padding: 1px 7px;
     }
     .player-total-badge.bust { color: var(--red-neg); }
     .player-total-badge.bj   { color: #f6e05e; }
     .player-cards-row {
-      font-size: 0.92rem;
-      letter-spacing: 1px;
-      color: var(--text);
-      min-height: 20px;
+      font-size: 0.92rem; letter-spacing: 1px;
+      color: var(--text); min-height: 20px;
     }
     .card-tag {
-      display: inline-block;
-      background: #fff;
-      color: #111;
-      border-radius: 3px;
-      padding: 1px 5px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      margin-right: 4px;
-      letter-spacing: 0;
+      display: inline-block; background: #fff; color: #111;
+      border-radius: 3px; padding: 1px 5px;
+      font-size: 0.75rem; font-weight: 700;
+      margin-right: 4px; letter-spacing: 0;
     }
     .card-tag.red { color: #c0392b; }
 
-    /* ── SEEN CARDS ── */
-    /* Alertas de mano */
+    /* ── HISTORY ── */
+    #history-list {
+      max-height: 240px; overflow-y: auto;
+      scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent;
+    }
+    .history-row {
+      display: flex; align-items: center;
+      padding: 4px 6px; gap: 8px;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+    .history-row:hover { background: rgba(255,255,255,0.04); }
+    .history-idx {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 0.65rem; color: var(--text-dim);
+      width: 26px; text-align: right;
+    }
+    .history-zone {
+      font-size: 0.6rem; font-weight: 700; letter-spacing: 1px;
+      padding: 1px 6px; border-radius: 3px;
+      width: 38px; text-align: center;
+    }
+    .history-zone.dealer   { background: rgba(220,60,60,0.18);  color: #f87171; }
+    .history-zone.player_1 { background: rgba(74,222,128,0.18); color: var(--green-pos); }
+    .history-zone.player_2 { background: rgba(0,150,220,0.18);  color: var(--blue-acc); }
+    .history-zone.player_3 { background: rgba(220,0,220,0.18);  color: #d946ef; }
+    .history-card {
+      flex: 1; font-weight: 600;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 0.85rem; color: var(--text);
+    }
+    .history-del {
+      background: transparent;
+      border: 1px solid rgba(248,113,113,0.4);
+      color: #f87171;
+      width: 22px; height: 22px;
+      border-radius: 4px; cursor: pointer;
+      font-size: 0.85rem; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .history-del:hover { background: rgba(248,113,113,0.2); }
+
+    /* ── ALERTAS ── */
     .hand-alert {
-      display: none;
-      text-align: center;
-      padding: 10px;
-      border-radius: 6px;
-      font-family: 'Playfair Display', serif;
-      font-size: 1.3rem;
-      font-weight: 700;
-      letter-spacing: 3px;
+      display: none; text-align: center; padding: 10px;
+      border-radius: 6px; font-family: 'Playfair Display', serif;
+      font-size: 1.3rem; font-weight: 700; letter-spacing: 3px;
       margin-bottom: 6px;
       animation: alert-blink 0.4s ease-in-out infinite alternate;
     }
     .hand-alert.bust       { display:block; background:#2d0000; border:2px solid #f87171; color:#f87171; }
     .hand-alert.twentyone  { display:block; background:#1a1a00; border:2px solid #fbbf24; color:#fbbf24; }
     .hand-alert.blackjack  { display:block; background:#1a1200; border:2px solid #f59e0b; color:#f59e0b; }
-    @keyframes alert-blink {
-      from { opacity: 1; } to { opacity: 0.5; }
-    }
+    @keyframes alert-blink { from { opacity: 1; } to { opacity: 0.5; } }
 
-    .seen-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
+    .seen-empty {
+      font-size: 0.78rem; color: var(--text-dim); font-style: italic;
+      padding: 6px 4px;
     }
-    .seen-chip {
-      font-size: 0.7rem;
-      font-weight: 600;
-      padding: 3px 8px;
-      border-radius: 4px;
-      background: var(--panel2);
-      border: 1px solid var(--border);
-      color: var(--text);
-      letter-spacing: 0.3px;
-    }
-    .seen-chip.red { border-color: rgba(240,100,100,0.4); color: #fca5a5; }
-    .seen-empty { font-size: 0.78rem; color: var(--text-dim); font-style: italic; }
 
     /* ── BUTTONS ── */
     .btn-row { display: flex; gap: 8px; }
     .btn {
-      flex: 1;
-      padding: 11px 8px;
-      border: 1px solid;
-      border-radius: 6px;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      cursor: pointer;
+      flex: 1; padding: 11px 8px; border: 1px solid;
+      border-radius: 6px; font-family: 'Inter', sans-serif;
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; cursor: pointer;
       transition: opacity 0.2s, transform 0.1s;
     }
     .btn:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
     .btn:active:not(:disabled) { transform: translateY(0); }
     .btn:disabled { opacity: 0.3; cursor: not-allowed; }
     .btn-start {
-      background: transparent;
+      background: transparent; border-color: var(--gold);
+      color: var(--gold); font-size: 0.8rem;
+      padding: 13px; width: 100%;
+    }
+    .btn-start.active { background: rgba(201,162,39,0.12); }
+    .btn-stand { background: transparent; border-color: var(--green-pos); color: var(--green-pos); }
+    .btn-reset { background: transparent; border-color: var(--red-neg); color: var(--red-neg); }
+    .btn-undo  { background: transparent; border-color: #94a3b8; color: #94a3b8; }
+
+    /* ── SETUP / CONFIG PANEL ── */
+    #setup-panel {
+      background: linear-gradient(180deg, #122318 0%, #0e1f12 100%);
+      border-bottom: 2px solid var(--gold-dim);
+    }
+    .setup-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .setup-row:last-of-type { margin-bottom: 0; }
+    .setup-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      width: 80px;
+      flex-shrink: 0;
+    }
+    .opt-group {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+    .opt-btn {
+      flex: 1;
+      min-width: 36px;
+      padding: 8px 4px;
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text-dim);
+      font-family: 'Roboto Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .opt-btn:hover {
+      border-color: var(--gold-dim);
+      color: var(--text);
+    }
+    .opt-btn.selected {
+      background: rgba(201,162,39,0.15);
       border-color: var(--gold);
       color: var(--gold);
-      font-size: 0.8rem;
-      padding: 13px;
+      box-shadow: 0 0 0 1px rgba(201,162,39,0.3);
+    }
+    .opt-btn.system {
+      flex: 1;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    #btn-apply-config {
       width: 100%;
+      margin-top: 14px;
+      padding: 10px;
+      background: transparent;
+      border: 1px solid var(--gold-dim);
+      border-radius: 6px;
+      color: var(--gold);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
     }
-    .btn-start.active {
+    #btn-apply-config:hover {
       background: rgba(201,162,39,0.12);
+      border-color: var(--gold);
     }
-    .btn-stand {
-      background: transparent;
-      border-color: var(--green-pos);
-      color: var(--green-pos);
+    #btn-apply-config.dirty {
+      background: rgba(201,162,39,0.18);
+      border-color: var(--gold);
+      animation: pulse-apply 1.5s ease-in-out infinite;
     }
-    .btn-reset {
-      background: transparent;
-      border-color: var(--red-neg);
-      color: var(--red-neg);
+    @keyframes pulse-apply {
+      0%,100% { box-shadow: 0 0 0 0 rgba(201,162,39,0.4); }
+      50%     { box-shadow: 0 0 0 4px rgba(201,162,39,0); }
+    }
+    #btn-apply-config:disabled {
+      opacity: 0.5; cursor: not-allowed;
     }
   </style>
 </head>
 <body>
 
-  <!-- HEADER -->
   <div id="header">
     <div id="header-logo">
       <span class="suits">♠ <span class="red">♥</span> <span class="red">♦</span> ♣</span>
@@ -454,21 +460,62 @@
     </div>
   </div>
 
-  <!-- MAIN -->
   <div id="main">
 
-    <!-- CAMERA -->
     <div id="camera-panel">
       <img id="camera-feed" src="/video_feed" alt="Feed" />
-      <div id="cam-overlay">LIVE · YOLOv8m-seg</div>
+      <div id="cam-overlay">LIVE · YOLOv8m-seg · debounce 1.0s</div>
     </div>
 
-    <!-- SIDE PANEL -->
     <div id="side-panel">
+
+      <!-- SETUP / CONFIG -->
+      <div class="section" id="setup-panel">
+        <div class="section-title">Configuración partida</div>
+
+        <div class="setup-row">
+          <div class="setup-label">Jugadores</div>
+          <div class="opt-group" id="opt-players"></div>
+        </div>
+
+        <div class="setup-row">
+          <div class="setup-label">Mazos</div>
+          <div class="opt-group" id="opt-decks"></div>
+        </div>
+
+        <div class="setup-row">
+          <div class="setup-label">Conteo</div>
+          <div class="opt-group" id="opt-system"></div>
+        </div>
+
+        <button id="btn-apply-config" onclick="applyConfig()">
+          Aplicar configuración
+        </button>
+      </div>
+
+      <!-- MARCADOR PARTIDA -->
+      <div class="section">
+        <div class="section-title">Marcador partida</div>
+        <div id="scoreboard">
+          <div class="score-cell dealer">
+            <div class="score-cell-label">Dealer</div>
+            <div class="score-cell-val" id="score-dealer">0</div>
+          </div>
+          <div class="score-cell player">
+            <div class="score-cell-label">Tú</div>
+            <div class="score-cell-val" id="score-player">0</div>
+          </div>
+          <div class="score-cell push">
+            <div class="score-cell-label">Push</div>
+            <div class="score-cell-val" id="score-push">0</div>
+          </div>
+        </div>
+        <div id="rounds-count">0 rondas</div>
+      </div>
 
       <!-- CONTEO -->
       <div class="section">
-        <div class="section-title">Conteo Hi-Lo</div>
+        <div class="section-title" id="count-title">Conteo</div>
         <div id="count-main">
           <div>
             <div class="count-big-label">Running Count</div>
@@ -481,9 +528,7 @@
         </div>
         <div class="adv-bar-wrap">
           <div class="adv-bar-labels">
-            <span>Casa</span>
-            <span>Ventaja</span>
-            <span>Jugador</span>
+            <span>Casa</span><span>Ventaja</span><span>Jugador</span>
           </div>
           <div class="adv-bar-bg">
             <div id="adv-bar-fill"></div>
@@ -501,12 +546,13 @@
         </div>
       </div>
 
-      <!-- SUGERENCIA -->
+      <!-- RECOMENDACION + EV -->
       <div class="section">
-        <div class="section-title">Estrategia básica</div>
+        <div class="section-title">Recomendación (EV)</div>
         <div id="suggestion-box" class="wait">
-          <div class="sug-label">Acción recomendada</div>
+          <div class="sug-label">Acción óptima</div>
           <div id="suggestion-action">—</div>
+          <div id="suggestion-ev"></div>
         </div>
       </div>
 
@@ -519,10 +565,10 @@
         <div id="players-container"></div>
       </div>
 
-      <!-- CARTAS DETECTADAS -->
+      <!-- HISTORIAL -->
       <div class="section">
-        <div class="section-title">Cartas esta ronda</div>
-        <div id="seen-cards-container">
+        <div class="section-title">Historial cartas</div>
+        <div id="history-list">
           <span class="seen-empty">Sin detecciones</span>
         </div>
       </div>
@@ -531,11 +577,14 @@
       <div class="section">
         <div class="section-title">Control</div>
         <button class="btn btn-start" id="btn-start" onclick="sendStart()">
-          ♠ EMPEZAR A JUGAR
+          ♠ EMPEZAR PARTIDA
         </button>
         <div class="btn-row" style="margin-top:10px">
           <button class="btn btn-stand" id="btn-stand" onclick="sendStand()" disabled>Plantarse</button>
           <button class="btn btn-reset" id="btn-reset" onclick="sendReset()" disabled>Nueva ronda</button>
+        </div>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn btn-undo" id="btn-undo" onclick="sendUndo()" disabled>↶ Deshacer última</button>
         </div>
       </div>
 

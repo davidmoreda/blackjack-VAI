@@ -32,7 +32,8 @@ import yaml
 
 from vision.capture import CameraCapture
 from vision.detector import CardDetector
-from vision.zones import ZoneManager, draw_zones, ZONE_COLORS
+from vision.zones import ZoneManager, build_zones, draw_zones, ZONE_COLORS
+from vision.debouncer import CardDebouncer
 from game.state_machine import BlackjackStateMachine, GameState
 from game.counter import CardCounter
 
@@ -44,76 +45,6 @@ def _put(frame, text, pos, scale=0.6, color=(220, 220, 220), thickness=1):
                 scale, (0, 0, 0), thickness + 2, cv2.LINE_AA)
     cv2.putText(frame, text, pos, cv2.FONT_HERSHEY_SIMPLEX,
                 scale, color, thickness, cv2.LINE_AA)
-
-
-# ── Zonas dinamicas segun num_players ────────────────────────────────────────
-
-def build_zones(num_players: int) -> dict:
-    """
-    Genera dealer arriba (40% altura) + N columnas iguales para los jugadores
-    en el 60% inferior. Ignora lo que haya en config.yaml para evitar
-    desalineamientos cuando se cambia el numero de jugadores.
-    """
-    n = max(1, int(num_players))
-    zones = {"dealer": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 0.4}}
-    width = 1.0 / n
-    for i in range(n):
-        zones[f"player_{i+1}"] = {
-            "x": i * width, "y": 0.4, "w": width, "h": 0.6,
-        }
-    return zones
-
-
-# ── Debouncer de detecciones ─────────────────────────────────────────────────
-
-class CardDebouncer:
-    """
-    Una carta debe detectarse de forma continua durante `threshold` segundos
-    antes de confirmarse. Filtra falsos positivos y oscilaciones del modelo.
-
-    Entrada en cada tick: pares (zone, label) actualmente visibles.
-    Salida: pares (zone, label) que acaban de superar el umbral.
-
-    Una carta confirmada no vuelve a emitirse hasta que desaparece y reaparece.
-    """
-
-    def __init__(self, threshold_s: float = 1.0):
-        self.threshold = threshold_s
-        self.pending: Dict[Tuple[str, str], float] = {}
-        self.committed: Set[Tuple[str, str]] = set()
-
-    def tick(self, visible: Iterable[Tuple[str, str]], now: float) -> List[Tuple[str, str]]:
-        visible_set = set(visible)
-        # Olvidar candidatos / confirmados que ya no se ven
-        for k in list(self.pending):
-            if k not in visible_set:
-                del self.pending[k]
-        self.committed &= visible_set
-
-        new_commits: List[Tuple[str, str]] = []
-        for key in visible_set:
-            if key in self.committed:
-                continue
-            t0 = self.pending.get(key)
-            if t0 is None:
-                self.pending[key] = now
-            elif now - t0 >= self.threshold:
-                new_commits.append(key)
-                self.committed.add(key)
-                self.pending.pop(key, None)
-        return new_commits
-
-    def progress(self, key: Tuple[str, str], now: float) -> float:
-        if key in self.committed:
-            return 1.0
-        t0 = self.pending.get(key)
-        if t0 is None:
-            return 0.0
-        return min(1.0, (now - t0) / self.threshold)
-
-    def reset(self):
-        self.pending.clear()
-        self.committed.clear()
 
 
 # ── Panel de Settings ─────────────────────────────────────────────────────────
@@ -202,8 +133,9 @@ class SettingsPanel:
         return frame
 
 
-# ── Sidebar de historial ─────────────────────────────────────────────────────
+# ── Layout (HUD + sidebar) ───────────────────────────────────────────────────
 
+HUD_H = 100
 SIDEBAR_W = 200
 ROW_H = 22
 HEADER_H = 38
@@ -222,7 +154,7 @@ ZONE_TAGS = {
 def draw_sidebar(frame, sm, hist_open: bool, hist_idx: int, scroll: int):
     h, w = frame.shape[:2]
     x0 = w - SIDEBAR_W
-    y0 = 90
+    y0 = HUD_H
 
     overlay = frame.copy()
     cv2.rectangle(overlay, (x0, y0), (w, h), (15, 15, 15), -1)
@@ -314,11 +246,60 @@ def _player_status(pdata: dict, dealer_has_card: bool) -> Tuple[str, Tuple[int, 
     return "...", (160, 160, 160)
 
 
+def _scoreboard_segments(score: dict, num_players: int) -> list:
+    """[(etiqueta, valor, color), ...]"""
+    segs = [("DEALER", score["dealer"], (60, 60, 220))]
+    p_wins = score["players"]
+    p_push = score["pushes"]
+    for pid in sorted(p_wins.keys()):
+        tag, color = ZONE_TAGS.get(pid, (pid.upper(), (200, 200, 200)))
+        label = "TU" if num_players == 1 else tag
+        segs.append((label, p_wins[pid], color))
+    total_push = sum(p_push.values())
+    if total_push:
+        segs.append(("PUSH", total_push, (160, 160, 160)))
+    return segs
+
+
+def _draw_scoreboard(frame, sm: BlackjackStateMachine):
+    h, w = frame.shape[:2]
+    snap_score = sm.to_dict()["score"]
+    rounds = snap_score["rounds"]
+    segments = _scoreboard_segments(snap_score, sm.num_players)
+
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    scale = 0.7
+    thick = 2
+    sep = "   "
+    widths = []
+    for lbl, val, _ in segments:
+        (lw, _), _ = cv2.getTextSize(f"{lbl} ", font, scale, thick)
+        (vw, _), _ = cv2.getTextSize(str(val), font, scale, thick + 1)
+        widths.append((lw, vw))
+    (sw, _), _ = cv2.getTextSize(sep, font, scale, thick)
+    total_w = sum(lw + vw for lw, vw in widths) + sw * (len(segments) - 1)
+
+    title = f"MARCADOR  ({rounds} rondas)"
+    (tw, _), _ = cv2.getTextSize(title, font, 0.45, 1)
+    _put(frame, title, ((w - tw) // 2, 22), 0.45, (180, 180, 180))
+
+    x = (w - total_w) // 2
+    y = 56
+    for i, ((lbl, val, color), (lw, vw)) in enumerate(zip(segments, widths)):
+        _put(frame, f"{lbl} ", (x, y), scale, color, thick)
+        x += lw
+        _put(frame, str(val), (x, y), scale, (240, 240, 240), thick + 1)
+        x += vw
+        if i < len(segments) - 1:
+            _put(frame, sep, (x, y), scale, (100, 100, 100))
+            x += sw
+
+
 def draw_hud(frame, sm: BlackjackStateMachine, settings_open: bool, hist_open: bool):
     h, w = frame.shape[:2]
     overlay = frame.copy()
-    cv2.rectangle(overlay, (0, 0), (w, 90), (20, 20, 20), -1)
-    frame = cv2.addWeighted(overlay, 0.75, frame, 0.25, 0)
+    cv2.rectangle(overlay, (0, 0), (w, HUD_H), (20, 20, 20), -1)
+    frame = cv2.addWeighted(overlay, 0.78, frame, 0.22, 0)
 
     state_colors = {
         GameState.WAITING:     (160, 160, 160),
@@ -328,20 +309,22 @@ def draw_hud(frame, sm: BlackjackStateMachine, settings_open: bool, hist_open: b
         GameState.ROUND_END:   (80,  80,  255),
     }
     sc = state_colors.get(sm.state, (200, 200, 200))
-    _put(frame, f"ESTADO: {sm.state.value.upper()}", (10, 22), 0.65, sc, 2)
+    _put(frame, f"ESTADO: {sm.state.value.upper()}", (10, 22), 0.6, sc, 2)
 
     cnt = sm.counter.state()
     deck_st = sm.deck.state()
     _put(frame, f"RC: {cnt['running_count']:+d}  TC: {cnt['true_count']:+.1f}  "
                 f"Vistas: {cnt['cards_seen']}  Restantes: {deck_st['total_remaining']}",
-         (10, 48), 0.5, (200, 200, 80))
+         (10, 48), 0.48, (200, 200, 80))
 
     extras = []
     if hist_open:    extras.append("[HIST]")
     if settings_open: extras.append("[CONFIG]")
     suffix = "  ".join(extras)
     controls = "[S]Partida [R]Ronda [SPACE]Stand [Z]Undo [H]Hist [P]Cfg [Q]Salir"
-    _put(frame, f"{controls}  {suffix}", (10, 78), 0.43, (150, 150, 150))
+    _put(frame, f"{controls}  {suffix}", (10, 84), 0.42, (150, 150, 150))
+
+    _draw_scoreboard(frame, sm)
 
     # Sugerencias (siempre visibles, una linea por jugador)
     snapshot = sm.to_dict()
@@ -531,9 +514,7 @@ def run(config_path: str = "config.yaml"):
                 if sm.history:
                     zone, card = sm.history[hist_idx]
                     if sm.remove_card(hist_idx):
-                        # Limpiar el debouncer para que la carta pueda reconfirmarse
-                        debouncer.committed.discard((zone, card))
-                        debouncer.pending.pop((zone, card), None)
+                        debouncer.forget((zone, card))
                         print(f"[CLI] Carta eliminada: {card} ({zone})")
                         if hist_idx >= len(sm.history):
                             hist_idx = max(0, len(sm.history) - 1)
@@ -567,8 +548,7 @@ def run(config_path: str = "config.yaml"):
             if sm.history:
                 zone, card = sm.history[-1]
                 if sm.undo_last():
-                    debouncer.committed.discard((zone, card))
-                    debouncer.pending.pop((zone, card), None)
+                    debouncer.forget((zone, card))
                     print(f"[CLI] Ultima carta deshecha: {card}")
             else:
                 print("[CLI] No hay cartas que deshacer")
