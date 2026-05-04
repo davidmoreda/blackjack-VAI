@@ -26,6 +26,9 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    extra_hosts:
+      # Permite que el contenedor alcance Windows (donde corre cam_server_windows.py)
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     environment:
       # Evita que ultralytics busque actualizaciones en cada arranque

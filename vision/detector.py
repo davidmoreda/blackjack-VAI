@@ -34,7 +34,7 @@ class CardDetector:
             frame,
             conf=self.confidence,
             iou=self.iou,
-            imgsz=640,
+            imgsz=1280,
             persist=True,          # estado del tracker persiste entre frames
             tracker="bytetrack.yaml",
             verbose=False,

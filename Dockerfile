@@ -27,14 +27,13 @@ WORKDIR /app
 # pip install no se vuelve a ejecutar.
 COPY requirements.txt .
 
-# PyTorch con soporte CUDA 12.1 se instala desde el índice oficial
-# de PyTorch (no existe en PyPI estándar con GPU).
-# Si no hay GPU disponible en el host, PyTorch cae automáticamente
-# a CPU sin errores gracias al flag --extra-index-url.
 RUN pip install --no-cache-dir \
         torch torchvision \
-        --index-url https://download.pytorch.org/whl/cu121 \
-    && pip install --no-cache-dir -r requirements.txt
+        --index-url https://download.pytorch.org/whl/cu121
+
+RUN pip install --no-cache-dir lapx>=0.5.2
+
+RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Código fuente ──────────────────────────────────────────────────
 # Se copian solo los módulos de la aplicación, no el dataset,
