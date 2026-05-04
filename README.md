@@ -48,7 +48,8 @@ blackjack-VAI/
 ├── Dockerfile
 ├── requirements.txt
 ├── YOLO_blackjack_v2.ipynb
-└── YOLO_blackjack_v3.ipynb
+├── YOLO_blackjack_v3.ipynb
+└── YOLO_blackjack_v4.ipynb
 ```
 
 ---
@@ -57,8 +58,8 @@ blackjack-VAI/
 
 | Fase | Estado | Descripción |
 |------|--------|-------------|
-| 1. Dataset | ✅ | Creación, etiquetado y limpieza en Roboflow (V3) |
-| 2. Entrenamiento | 🔄 En curso | YOLOv8m-seg local con RTX 4070 + MLflow |
+| 1. Dataset | ✅ | Creación, etiquetado y limpieza en Roboflow (V3 → V4) |
+| 2. Entrenamiento | 🔄 En curso | YOLOv8m-seg local con RTX 4070 + MLflow (v4 en progreso) |
 | 3. API | ✅ | FastAPI + WebSockets + endpoints REST |
 | 4. Lógica de juego | ✅ | Máquina de estados, conteo, EV dinámico, estrategia básica |
 | 5. Frontend | ✅ | Interfaz web en tiempo real con panel lateral |
@@ -134,50 +135,45 @@ docker compose down
 
 Si no tienes GPU o NVIDIA Container Toolkit, comenta el bloque `deploy` en `docker-compose.yml`.
 
-### Opción D — WSL + cámara de Windows
+### Opción D — WSL + Docker + cámara de Windows (recomendado)
 
-WSL2 no accede directamente a la webcam USB del host. La solución es levantar un servidor de streaming en Windows y que WSL consuma el vídeo por HTTP.
+WSL2 no accede directamente a la webcam USB del host. La solución es un servidor de streaming en Windows que Docker consume por HTTP.
 
-**Paso 1 — Instalar dependencias en Windows (Python nativo, no WSL)**
+**Paso 1 — Lanzar el servidor de cámara en Windows** (PowerShell/CMD, no WSL)
 
-```cmd
+```powershell
 pip install flask opencv-python
-```
-
-**Paso 2 — Lanzar el servidor de cámara en Windows**
-
-```cmd
 python cam_server_windows.py
 ```
 
 Salida esperada:
 ```
-Cámara 0 abierta: 1280x720
+Cámara 1 abierta: 1280x720
 Stream disponible en: http://0.0.0.0:5050/video
-Desde WSL usa:        http://10.255.255.254:5050/video
 ```
 
-**Paso 3 — Configurar WSL**
-
-Edita `config.yaml`:
+**Paso 2 — Configurar `config.yaml`**
 
 ```yaml
 camera:
-  index: 'http://10.255.255.254:5050/video'
+  index: "http://host.docker.internal:5050/video"
 ```
 
-Si la IP no funciona, búscala con:
+`host.docker.internal` es el nombre DNS que Docker resuelve automáticamente al host Windows. Está declarado en `docker-compose.yml` vía `extra_hosts`.
+
+**Paso 3 — Levantar Docker desde WSL**
 
 ```bash
-cat /etc/resolv.conf | grep nameserver
+docker compose up --build
+# Abre http://localhost:8000
 ```
 
-**Paso 4 — Arrancar desde WSL**
+**Verificar conectividad cámara desde el contenedor**
 
 ```bash
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-pip install -r requirements.txt
-python -m uvicorn api.main:app --host 0.0.0.0 --port 8000
+docker compose exec blackjack-vai python -c \
+  "import urllib.request; print(urllib.request.urlopen('http://host.docker.internal:5050/health').read())"
+# Respuesta esperada: b'{"cam":1,"height":720,"status":"ok","width":1280}'
 ```
 
 ---
@@ -322,7 +318,8 @@ El **true count** = running count / mazos restantes en el zapato.
 |---------|----------|--------------|---------------|-----------|
 | **V1** | ~10 506 | Auto-Orient, Tiling 2×2, **Grayscale**, Contrast adaptativo | Múltiples (Roboflow) | ❌ No detecta en webcam — grayscale vs color en tiempo real |
 | **V2** | ~3 741 | Auto-Orient, Resize 640×640 | Ninguna | ❌ No se usó para entrenar |
-| **V3** | ~3 741 | Auto-Orient, Resize 640×640 | **Ninguna** (las hace YOLO) | ✅ Versión correcta |
+| **V3** | ~3 741 | Auto-Orient, Resize 640×640 | **Ninguna** (las hace YOLO) | ✅ mAP50=0.954 — funciona bien de cerca |
+| **V4** | ~3 741+ | Auto-Orient, **Letterbox** (sin distorsión) | Augmentation agresivo para distancia | 🔄 En entrenamiento |
 
 Errores en V1:
 1. **Grayscale** → el modelo aprendió imágenes en gris pero la webcam envía color
@@ -330,60 +327,73 @@ Errores en V1:
 3. **imgsz mismatch** → entrenado a 960 px, inferencia a 640 px
 4. **Bug de ruta** → el notebook descargaba V2 pero usaba la ruta de V1
 
-### V3 — configuración (Roboflow)
+### V3 — configuración
 
 - **Preprocessing:** Auto-Orient + Resize 640×640 (Stretch)
-- **Augmentations:** ninguna — YOLO aplica las suyas en tiempo de entrenamiento
+- **Augmentations:** YOLO — scale=0.30, mosaic=1.0, flipud=0.15, fliplr=0.50, mixup=0.15, copy_paste=0.20
 - **Split:** 80 % train / 10 % val / 10 % test
+- **Resultado:** mAP50(box)=0.954, mAP50-95(box)=0.948
+
+### V4 — configuración (producción)
+
+- **Preprocessing:** Auto-Orient + **Letterbox** (padding gris, sin distorsión de cartas)
+- **Split:** **90 % train / 10 % val** (test fusionado en train para maximizar datos de producción)
+- **Augmentations agresivas para detección a distancia:**
+
+| Parámetro | V3 | V4 | Efecto |
+|-----------|----|----|--------|
+| `scale` | 0.30 | **0.70** | Cartas al 30% del tamaño → simula cámara lejana |
+| `copy_paste` | 0.20 | **0.50** | Pega cartas sobre fondos variados |
+| `erasing` | — | **0.40** | Oclusión por manos/fichas |
+| `perspective` | — | **0.0008** | Ángulo de webcam sobre la mesa |
+| `shear` | 2.0 | **6.0** | Perspectiva lateral |
+| `degrees` | 10 | **15** | Más rotación |
+| `close_mosaic` | 10 | **15** | Más epochs con mosaic |
+
+- **Inferencia:** `imgsz=1280` (resolución nativa webcam) para detección óptima a distancia
 
 ### Configuración de entrenamiento local
 
-| Parámetro | Valor |
-|-----------|-------|
-| GPU | RTX 4070 Laptop (8 GB VRAM) |
-| Modelo base | `yolov8m-seg.pt` |
-| Epochs | 100 (patience 20) |
-| imgsz | 640 |
-| Batch | 8 |
-| Tracking | MLflow (`mlflow ui`) |
-| Checkpoints | Cada 10 epochs + best/last siempre |
-| Resume | Automático si se interrumpe |
+| Parámetro | V3 | V4 |
+|-----------|----|----|
+| GPU | RTX 4070 Laptop (8 GB VRAM) | RTX 4070 Laptop (8 GB VRAM) |
+| Modelo base | `yolov8m-seg.pt` | `yolov8m-seg.pt` |
+| Epochs | 100 (patience 20) | 120 (patience 25) |
+| imgsz (train) | 640 | 640 |
+| imgsz (infer) | 640 | **1280** |
+| Batch | 8 | 8 |
+| Tracking | MLflow | MLflow (mismo DB) |
 
-### Lanzar entrenamiento
+### Lanzar entrenamiento V4
 
 ```bash
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-pip install -r requirements.txt mlflow
+# Activar el entorno con MLflow y ultralytics
+source "/home/dmore/code/Máster IA/01.-MASTER COURSES/12.- MLOPS Y AI BI/mlops_env/.venv/bin/activate"
 
-jupyter notebook YOLO_blackjack_v3.ipynb
-```
-
-En la celda de configuración:
-
-```python
-ROBOFLOW_API_KEY = "tu_api_key"
-ROBOFLOW_VERSION = 3
+jupyter notebook YOLO_blackjack_v4.ipynb
 ```
 
 ### Reanudar entrenamiento interrumpido
 
 ```python
-RESUME = True  # ya es el valor por defecto en el notebook
+RESUME = True  # valor por defecto en ambos notebooks
 ```
 
 ### Seguimiento con MLflow
 
 ```bash
-mlflow ui --port 5000 --backend-store-uri ./mlruns
-# http://localhost:5000
+cd "/home/dmore/code/Máster IA/01.-MASTER COURSES/12.- MLOPS Y AI BI/mlops_env"
+mlflow ui --backend-store-uri sqlite:///mlflow.db --host 0.0.0.0 --port 5001
+# http://localhost:5001
 ```
 
+Los experimentos `blackjackvai-v3` y `blackjackvai-v4` están en el mismo `mlflow.db`.  
 Métricas por epoch: `box_loss`, `seg_loss`, `cls_loss`, `mAP50`, `mAP50-95`.
 
 ### Estructura tras el entrenamiento
 
 ```
-training_runs/runs/yolo8m_seg_v3/
+training_runs/runs/yolo8m_seg_v4/
 ├── weights/
 │   ├── best.pt
 │   ├── last.pt
@@ -393,7 +403,8 @@ training_runs/runs/yolo8m_seg_v3/
 
 models/
 ├── best_v3_YYYYMMDD_HHMM.pt
-└── best.pt
+├── best_v4_YYYYMMDD_HHMM.pt
+└── best.pt  →  best_v4_...pt  (symlink al último)
 ```
 
 ---
