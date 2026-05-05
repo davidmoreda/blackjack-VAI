@@ -12,6 +12,8 @@ services:
       # config.yaml también se monta para poder cambiar parámetros
       # (confianza, número de mazos, etc.) sin reconstruir la imagen.
       - ./config.yaml:/app/config.yaml:ro
+      # Caché de HuggingFace: evita re-descargar Depth Anything en cada rebuild.
+      - huggingface_cache:/root/.cache/huggingface
     # devices:
       # Webcam solo disponible en Linux. En Windows usar cam_server_windows.py
       # - /dev/video0:/dev/video0
@@ -33,3 +35,8 @@ services:
     environment:
       # Evita que ultralytics busque actualizaciones en cada arranque
       - YOLO_AUTOINSTALL=false
+
+volumes:
+  # Volumen nombrado para la caché de HuggingFace (Depth Anything V2).
+  # Se mantiene entre rebuilds, la descarga solo ocurre la primera vez.
+  huggingface_cache:

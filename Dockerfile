@@ -38,11 +38,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # ── Código fuente ──────────────────────────────────────────────────
 # Se copian solo los módulos de la aplicación, no el dataset,
 # los runs de entrenamiento ni los notebooks (ver .dockerignore).
-COPY api/       ./api/
-COPY game/      ./game/
-COPY vision/    ./vision/
-COPY frontend/  ./frontend/
-COPY config.yaml .
+COPY api/          ./api/
+COPY game/         ./game/
+COPY vision/       ./vision/
+COPY frontend/     ./frontend/
+COPY config.yaml   .
+COPY test_normals.py .
 
 # Puerto en el que escucha uvicorn (debe coincidir con docker-compose)
 EXPOSE 8000
