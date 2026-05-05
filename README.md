@@ -102,17 +102,26 @@ blackjack-VAI/
 ### Lanzar entrenamiento
 
 ```bash
-# Activar entorno
-source "/home/dmore/code/Máster IA/01.-MASTER COURSES/12.- MLOPS Y AI BI/mlops_env/.venv/bin/activate"
+# 1. Crear y activar entorno virtual (si no lo tienes ya)
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 
-# Abrir el notebook correspondiente
+# 2. Instalar dependencias
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+pip install lapx>=0.5.2
+pip install -r requirements.txt
+pip install jupyter
+
+# 3. Abrir el notebook correspondiente
 jupyter notebook YOLO_blackjack_v5.ipynb
 ```
 
 ### Seguimiento con MLflow
 
+La base de datos MLflow está en el propio repositorio (`mlflow.db`, excluida de git).
+
 ```bash
-cd "/home/dmore/code/Máster IA/01.-MASTER COURSES/12.- MLOPS Y AI BI/mlops_env"
+# Desde la raíz del proyecto
 mlflow ui --backend-store-uri sqlite:///mlflow.db --host 0.0.0.0 --port 5001
 # http://localhost:5001
 ```
@@ -121,18 +130,51 @@ mlflow ui --backend-store-uri sqlite:///mlflow.db --host 0.0.0.0 --port 5001
 
 ## Instalación y uso
 
-### Requisitos previos
+### 1. Requisitos previos del sistema
 
-- Docker + Docker Compose
-- NVIDIA Container Toolkit (opcional, para GPU en Docker)
-- Git LFS (`git lfs install`) — el modelo `best.pt` se descarga automáticamente con `git clone`
+Instala las siguientes herramientas si aún no las tienes:
 
-### Clonar el repositorio
+**Git y Git LFS** (necesario para descargar el modelo `best.pt`):
+```bash
+# Ubuntu/Debian
+sudo apt update && sudo apt install git git-lfs -y
+git lfs install
+```
+
+**Docker y Docker Compose** (para ejecutar la app en contenedor):
+```bash
+# Ubuntu/Debian
+sudo apt install docker.io docker-compose-plugin -y
+sudo usermod -aG docker $USER   # permite usar docker sin sudo (reinicia sesión)
+```
+> En Windows instala [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+**Python 3.10+** (solo necesario para las opciones sin Docker):
+```bash
+sudo apt install python3 python3-pip python3-venv -y
+```
+
+**NVIDIA Container Toolkit** (opcional — solo si tienes GPU NVIDIA y quieres usarla en Docker):
+```bash
+# Guía oficial: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
+sudo apt install nvidia-container-toolkit -y
+sudo systemctl restart docker
+```
+
+---
+
+### 2. Clonar el repositorio
 
 ```bash
 git clone <url-del-repo>
 cd blackjack-VAI
 ```
+
+Git LFS descargará automáticamente el modelo `models/best.pt` durante el clone.
+
+---
+
+### 3. Elegir modo de ejecución
 
 ---
 
@@ -215,12 +257,20 @@ Igual que la Opción B. Docker Desktop expone `host.docker.internal` de forma na
 ### Opción D — Sin Docker (desarrollo local, Linux/WSL)
 
 ```bash
-# Instalar dependencias
+# 1. Crear entorno virtual
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+
+# 2. Instalar PyTorch con soporte CUDA (si tienes GPU NVIDIA)
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+# Sin GPU (solo CPU):
+# pip install torch torchvision
+
+# 3. Instalar el resto de dependencias
 pip install lapx>=0.5.2
 pip install -r requirements.txt
 
-# Arrancar
+# 4. Arrancar
 python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
 # Abre http://localhost:8000
 ```
