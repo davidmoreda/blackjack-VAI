@@ -4,7 +4,7 @@ api:
 camera:
   fps: 30
   height: 720
-  index: "http://10.30.142.230:5050/video"
+  index: "http://host.docker.internal:5050/video"
   width: 1280
 detection:
   confidence: 0.55

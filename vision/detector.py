@@ -23,6 +23,17 @@ class CardDetector:
         self.confidence = confidence
         self.iou = iou
 
+    @staticmethod
+    def _enhance(frame: np.ndarray) -> np.ndarray:
+        """Sharpening suave + normalización de contraste para cámaras de baja calidad."""
+        lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+        frame = cv2.cvtColor(cv2.merge([l, a, b]), cv2.COLOR_LAB2BGR)
+        kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]], dtype=np.float32)
+        return cv2.filter2D(frame, -1, kernel)
+
     def detect(self, frame: np.ndarray) -> List[Detection]:
         """
         Usa model.track() con ByteTrack para mantener IDs estables entre frames.
@@ -30,6 +41,7 @@ class CardDetector:
         eliminando el parpadeo sin añadir ghosting artificial.
         persist=True mantiene el estado del tracker entre llamadas.
         """
+        frame = self._enhance(frame)
         results = self.model.track(
             frame,
             conf=self.confidence,
