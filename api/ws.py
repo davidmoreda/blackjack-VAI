@@ -47,13 +47,12 @@ def init(config: dict):
     _build_game(
         num_players=gcfg.get("num_players", 1),
         num_decks=gcfg.get("num_decks", 6),
-        counting_system=gcfg.get("counting_system", "hilo"),
     )
 
 
-def _build_game(num_players: int, num_decks: int, counting_system: str):
+def _build_game(num_players: int, num_decks: int):
     global _game_sm, _zone_mgr
-    counter = CardCounter(system=counting_system, num_decks=num_decks)
+    counter = CardCounter(system="hilo", num_decks=num_decks)
     _game_sm = BlackjackStateMachine(
         num_players=num_players,
         counter=counter,
@@ -63,34 +62,27 @@ def _build_game(num_players: int, num_decks: int, counting_system: str):
     _debouncer.reset()
 
 
-def reconfigure(num_players: int, num_decks: int, counting_system: str) -> dict:
+def reconfigure(num_players: int, num_decks: int) -> dict:
     """
-    Aplica una nueva configuracion de partida (jugadores, mazos, sistema).
-    Resetea por completo el juego y las zonas — pensado para invocarse
-    antes de empezar a jugar.
+    Aplica una nueva configuracion de partida (jugadores, mazos).
+    Resetea por completo el juego y las zonas.
     """
     from game.ev_calculator import clear_caches
     clear_caches()
     with _config_lock:
         gcfg = _config.setdefault("game", {})
-        gcfg["num_players"]     = num_players
-        gcfg["num_decks"]       = num_decks
-        gcfg["counting_system"] = counting_system
-    _build_game(num_players, num_decks, counting_system)
-    return {
-        "num_players": num_players,
-        "num_decks": num_decks,
-        "counting_system": counting_system,
-    }
+        gcfg["num_players"] = num_players
+        gcfg["num_decks"]   = num_decks
+    _build_game(num_players, num_decks)
+    return {"num_players": num_players, "num_decks": num_decks}
 
 
 def get_config() -> dict:
     with _config_lock:
         gcfg = _config.get("game", {})
         return {
-            "num_players":     gcfg.get("num_players", 1),
-            "num_decks":       gcfg.get("num_decks", 6),
-            "counting_system": gcfg.get("counting_system", "hilo"),
+            "num_players": gcfg.get("num_players", 1),
+            "num_decks":   gcfg.get("num_decks", 6),
         }
 
 

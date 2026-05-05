@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir *)",
+      "Bash(uv run *)",
+      "Bash(curl *)",
+      "Bash(uv pip *)"
+    ]
+  }
+}

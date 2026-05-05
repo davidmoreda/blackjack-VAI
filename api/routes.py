@@ -26,10 +26,8 @@ class StandRequest(BaseModel):
 class ConfigRequest(BaseModel):
     num_decks: int = 6
     num_players: int = 1
-    counting_system: str = "hilo"
 
 
-COUNTING_SYSTEMS = {"hilo", "ko", "omega2"}
 NUM_DECKS_OPTIONS = {1, 2, 4, 6, 8}
 NUM_PLAYERS_RANGE = range(1, 8)
 
@@ -98,8 +96,6 @@ async def configure(req: ConfigRequest):
     Reconstruye la partida con la nueva configuracion (jugadores / mazos /
     sistema). Resetea el marcador, las manos y el zapato.
     """
-    if req.counting_system not in COUNTING_SYSTEMS:
-        raise HTTPException(400, f"sistema desconocido: {req.counting_system}")
     if req.num_decks not in NUM_DECKS_OPTIONS:
         raise HTTPException(400, f"num_decks debe estar en {sorted(NUM_DECKS_OPTIONS)}")
     if req.num_players not in NUM_PLAYERS_RANGE:
@@ -109,6 +105,5 @@ async def configure(req: ConfigRequest):
     applied = reconfigure(
         num_players=req.num_players,
         num_decks=req.num_decks,
-        counting_system=req.counting_system,
     )
     return {"ok": True, "config": applied}

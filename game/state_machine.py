@@ -253,6 +253,10 @@ class BlackjackStateMachine:
             "state": self.state.value,
             "game_active": self.game_active,
             "current_player": self.current_player,
+            "config": {
+                "num_players": len(self.player_ids),
+                "num_decks": self.deck.num_decks,
+            },
             "dealer": {
                 "cards": self.dealer_hand.cards,
                 "total": self.dealer_hand.total,

@@ -8,13 +8,9 @@ let lastState = null;
 // Setup config (selecciones del usuario, antes de aplicar)
 const PLAYERS_OPTIONS = [1, 2, 3, 4];
 const DECKS_OPTIONS   = [1, 2, 4, 6, 8];
-const SYSTEMS_OPTIONS = [
-  { id: "hilo",   label: "Hi-Lo" },
-  { id: "ko",     label: "KO" },
-  { id: "omega2", label: "Omega II" },
-];
-let appliedConfig = { num_players: 1, num_decks: 6, counting_system: "hilo" };
+let appliedConfig = { num_players: 1, num_decks: 6 };
 let pendingConfig = { ...appliedConfig };
+let _lastHistoryKey = "";
 
 // ── Setup panel: render botones y manejo de seleccion ─────────────────
 function renderSetupPanel() {
@@ -22,7 +18,6 @@ function renderSetupPanel() {
                  "num_players");
   renderOptGroup("opt-decks", DECKS_OPTIONS.map(n => ({ id: n, label: String(n) })),
                  "num_decks");
-  renderOptGroup("opt-system", SYSTEMS_OPTIONS, "counting_system", "system");
   refreshOptHighlights();
   refreshApplyButton();
 }
@@ -60,9 +55,8 @@ function refreshApplyButton() {
   const btn = document.getElementById("btn-apply-config");
   if (!btn) return;
   const dirty =
-    pendingConfig.num_players     !== appliedConfig.num_players  ||
-    pendingConfig.num_decks       !== appliedConfig.num_decks    ||
-    pendingConfig.counting_system !== appliedConfig.counting_system;
+    pendingConfig.num_players !== appliedConfig.num_players ||
+    pendingConfig.num_decks   !== appliedConfig.num_decks;
   if (dirty) {
     btn.classList.add("dirty");
     btn.textContent = "Aplicar y reiniciar partida";
@@ -78,14 +72,17 @@ async function applyConfig() {
   const r = await fetch("/api/config", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(pendingConfig),
+    body: JSON.stringify({
+      num_players: pendingConfig.num_players,
+      num_decks:   pendingConfig.num_decks,
+    }),
   });
   if (!r.ok) {
     alert("No se pudo aplicar la configuración");
     return;
   }
   const data = await r.json();
-  appliedConfig = { ...data.config };
+  appliedConfig = { num_players: data.config.num_players, num_decks: data.config.num_decks };
   pendingConfig = { ...appliedConfig };
   refreshApplyButton();
 }
@@ -95,8 +92,8 @@ async function loadCurrentConfig() {
     const r = await fetch("/api/config");
     if (!r.ok) return;
     const c = await r.json();
-    appliedConfig = { ...c };
-    pendingConfig = { ...c };
+    appliedConfig = { num_players: c.num_players, num_decks: c.num_decks };
+    pendingConfig = { ...appliedConfig };
     refreshOptHighlights();
     refreshApplyButton();
   } catch (e) {
@@ -155,10 +152,7 @@ function updateUI(state) {
   const tc = c.true_count    ?? 0;
 
   const countTitle = document.getElementById("count-title");
-  if (countTitle) {
-    const sys = (state.config?.counting_system || "").toUpperCase() || "";
-    countTitle.textContent = sys ? `Conteo ${sys}` : "Conteo";
-  }
+  if (countTitle) countTitle.textContent = "Conteo Hi-Lo";
 
   const rcEl = document.getElementById("running-count");
   if (rcEl) {
@@ -199,12 +193,13 @@ function updateUI(state) {
   }
 
   // Sugerencia principal — siempre del primer jugador (j1) o del jugador activo
-  const focusPid = currentPlayer || Object.keys(state.players || {})[0];
-  const focus = focusPid ? state.players?.[focusPid] : null;
-  if (focus) {
-    updateSuggestion(focus);
+  const numPlayers = Object.keys(state.players || {}).length;
+  if (numPlayers > 1) {
+    updateSuggestionMulti(state.players, currentPlayer);
   } else {
-    updateSuggestion(null);
+    const focusPid = currentPlayer || Object.keys(state.players || {})[0];
+    const focus = focusPid ? state.players?.[focusPid] : null;
+    updateSuggestion(focus);
   }
 
   updateAlerts(state);
@@ -364,6 +359,39 @@ function updateSuggestion(pdata) {
   }
 }
 
+function updateSuggestionMulti(players, activePid) {
+  const box  = document.getElementById("suggestion-box");
+  const text = document.getElementById("suggestion-action");
+  const evsEl = document.getElementById("suggestion-ev");
+  if (!box || !text) return;
+
+  const ACTION_COLOR = { HIT:"#f87171", STAND:"#4ade80", DOUBLE:"#60a5fa", SPLIT:"#a78bfa", WAIT:"#94a3b8" };
+
+  const rows = Object.entries(players).map(([pid, pdata]) => {
+    const isActive = pid === activePid;
+    const label = pid.replace("player_", "P");
+    let action = "—";
+    let color  = "#94a3b8";
+
+    if (pdata.bust)      { action = `BUST`; color = "#f87171"; }
+    else if (pdata.blackjack) { action = "BJ!"; color = "#fbbf24"; }
+    else if (pdata.stood)     { action = `STAND`; color = "#4ade80"; }
+    else if (pdata.suggestion) { action = pdata.suggestion; color = ACTION_COLOR[pdata.suggestion] || "#94a3b8"; }
+
+    const evStr = (pdata.evs && pdata.suggestion && pdata.evs[pdata.suggestion] !== undefined)
+      ? ` (${formatEv(pdata.evs[pdata.suggestion])})`
+      : "";
+
+    return `<span style="color:${color};font-weight:${isActive?'800':'600'};font-size:${isActive?'0.9rem':'0.78rem'}">`
+         + `${label}${isActive?' ◀':''} → ${action}${evStr}`
+         + `</span>`;
+  });
+
+  text.innerHTML = rows.join('<br>');
+  box.className = activePid ? "wait " + (players[activePid]?.suggestion || "wait").toLowerCase() : "wait";
+  if (evsEl) evsEl.innerHTML = "";
+}
+
 function updateAlerts(state) {
   const container = document.getElementById("alerts-container");
   if (!container) return;
@@ -392,6 +420,11 @@ function updateAlerts(state) {
 function updateHistory(history) {
   const container = document.getElementById("history-list");
   if (!container) return;
+
+  const key = JSON.stringify(history);
+  if (key === _lastHistoryKey) return;
+  _lastHistoryKey = key;
+
   if (!history.length) {
     container.innerHTML = '<span class="seen-empty">Sin detecciones</span>';
     return;
@@ -417,7 +450,11 @@ function updateHistory(history) {
     del.className = "history-del";
     del.textContent = "×";
     del.title = "Eliminar esta carta";
-    del.onclick = () => sendRemove(i);
+    del.onclick = () => {
+      row.style.opacity = "0.35";
+      del.disabled = true;
+      sendRemove(i, row);
+    };
 
     row.appendChild(idx);
     row.appendChild(zone);
@@ -454,6 +491,14 @@ async function sendUndo() {
   await fetch("/api/undo", { method: "POST" });
 }
 
-async function sendRemove(idx) {
-  await fetch(`/api/remove/${idx}`, { method: "POST" });
+async function sendRemove(idx, rowEl) {
+  const resp = await fetch(`/api/remove/${idx}`, { method: "POST" });
+  if (resp.ok) {
+    if (rowEl) rowEl.remove();
+    _lastHistoryKey = "";
+    const r = await fetch("/api/state");
+    if (r.ok) updateUI(await r.json());
+  } else {
+    if (rowEl) { rowEl.style.opacity = "1"; rowEl.querySelector(".history-del").disabled = false; }
+  }
 }
