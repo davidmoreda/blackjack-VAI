@@ -42,8 +42,8 @@ COPY api/          ./api/
 COPY game/         ./game/
 COPY vision/       ./vision/
 COPY frontend/     ./frontend/
+COPY tests/        ./tests/
 COPY config.yaml   .
-COPY test_normals.py .
 
 # Puerto en el que escucha uvicorn (debe coincidir con docker-compose)
 EXPOSE 8000

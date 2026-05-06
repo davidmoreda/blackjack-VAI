@@ -4,13 +4,20 @@ api:
 camera:
   fps: 30
   height: 720
-  index: "http://localhost:5050/video"
+  index: "http://host.docker.internal:5050/video"
   width: 1280
 detection:
   confidence: 0.55
   inference_fps: 15
   iou: 0.45
   model_path: models/best.pt
+depth_anything:
+  enabled: true          # true para activar normales en tiempo real
+  variant: small          # small | base | large
+  fps: 5                  # inferencias de depth por segundo (costoso)
+  axis_length: 60         # longitud en píxeles de los ejes XYZ
+  kalman_process_noise: 0.001
+  kalman_measurement_noise: 0.05
 game:
   counting_system: hilo
   num_decks: 1

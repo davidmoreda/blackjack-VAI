@@ -197,9 +197,16 @@ def _vision_loop():
     from vision.detector import CardDetector
     from vision.zones import draw_zones
 
-    det_cfg  = _config.get("detection", {})
-    inference_fps = det_cfg.get("inference_fps", 15)
+    det_cfg   = _config.get("detection", {})
+    depth_cfg = _config.get("depth_anything", {})
+
+    inference_fps  = det_cfg.get("inference_fps", 15)
     frame_interval = 1.0 / inference_fps
+
+    # Depth Anything corre a FPS menor (más costoso que YOLO)
+    depth_enabled  = depth_cfg.get("enabled", False)
+    depth_fps      = depth_cfg.get("fps", 5)
+    depth_interval = 1.0 / depth_fps
 
     cam = CameraCapture(_config)
 
@@ -213,8 +220,28 @@ def _vision_loop():
     except Exception as e:
         print(f"[vision] Modelo no disponible ({e}), streaming sin inferencia")
 
-    last_inference = 0.0
+    depth_estimator = None
+    normal_tracker  = None
+    if depth_enabled:
+        try:
+            from vision.depth_normals import DepthNormalEstimator
+            from vision.normal_tracker import NormalTracker
+            depth_estimator = DepthNormalEstimator(
+                variant=depth_cfg.get("variant", "small"),
+            )
+            normal_tracker = NormalTracker(
+                process_noise=depth_cfg.get("kalman_process_noise", 1e-3),
+                measurement_noise=depth_cfg.get("kalman_measurement_noise", 5e-2),
+            )
+            print("[vision] Depth Anything activo.")
+        except Exception as e:
+            print(f"[vision] Depth Anything no disponible ({e})")
+
+    last_inference  = 0.0
+    last_depth_run  = 0.0
     last_detections = []
+    # Normales suavizadas por track_id (se actualiza en cada depth run)
+    smoothed_normals: dict = {}
 
     while True:
         try:
@@ -223,13 +250,13 @@ def _vision_loop():
             time.sleep(0.1)
             continue
 
-        # Snapshot de globals (se pueden cambiar via reconfigure)
         zone_mgr = _zone_mgr
         sm       = _game_sm
 
         now = time.monotonic()
         h, w = frame.shape[:2]
 
+        # ── YOLO inference ────────────────────────────────────────────
         if detector and (now - last_inference) >= frame_interval:
             last_inference = now
             last_detections = detector.detect(frame)
@@ -248,10 +275,36 @@ def _vision_loop():
                 else:
                     _debouncer.reset()
 
+        # ── Depth Anything + Kalman ────────────────────────────────────
+        if (depth_estimator and normal_tracker and last_detections
+                and (now - last_depth_run) >= depth_interval):
+            last_depth_run = now
+            active_ids = {d.track_id for d in last_detections if d.track_id >= 0}
+            normal_tracker.tick(active_ids)
+
+            depth_results = depth_estimator.process_detections(frame, last_detections)
+            for r in depth_results:
+                tid = r["detection"].track_id
+                if tid < 0:
+                    continue
+                smoothed = normal_tracker.update(tid, r["avg_normal"])
+                smoothed_normals[tid] = smoothed
+
+        # ── Render ────────────────────────────────────────────────────
         if sm and zone_mgr:
             frame = draw_zones(frame, zone_mgr, sm)
         if last_detections and zone_mgr:
             frame = _draw_detections(frame, last_detections, _debouncer, zone_mgr, now)
+
+        # Dibujar ejes de normales sobre cada carta (usa última normal suavizada)
+        if depth_estimator and smoothed_normals and last_detections:
+            from vision.depth_normals import _draw_axes
+            axis_len = depth_cfg.get("axis_length", 60)
+            for det in last_detections:
+                tid = det.track_id
+                if tid in smoothed_normals:
+                    cx, cy = det.center
+                    _draw_axes(frame, cx, cy, smoothed_normals[tid], axis_len)
 
         ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
         if ok:

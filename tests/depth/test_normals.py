@@ -1,21 +1,22 @@
 """
 Prueba rápida: Depth Anything V2 → normal maps sobre imagen estática o webcam.
 
-Uso:
-  # Con una imagen:
-  python test_normals.py --image foto_cartas.jpg
+Ejecutar desde la raíz del proyecto:
+  uv run tests/depth/test_normals.py --image foto_cartas.jpg
+  uv run tests/depth/test_normals.py --image foto_cartas.jpg --yolo models/best.pt
+  uv run tests/depth/test_normals.py --webcam --yolo models/best.pt
 
-  # Con la webcam en tiempo real:
-  python test_normals.py --webcam
-
-  # Con YOLO + normals por carta:
-  python test_normals.py --image foto_cartas.jpg --yolo models/best.pt
+Los resultados se guardan en el directorio actual (normals_result.jpg, etc.)
 """
 
 import argparse
 import cv2
 import numpy as np
 import sys
+import os
+
+# Permite importar vision/ aunque el script esté en tests/depth/
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from vision.depth_normals import DepthNormalEstimator, draw_normals_overlay
 
