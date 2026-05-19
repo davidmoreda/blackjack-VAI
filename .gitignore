@@ -13,9 +13,14 @@ build/
 *.torchscript
 !models/best.pt
 
-# Archivos de entorno grandes
-mlflow.db
-mlruns/
+# MLflow: se incluye mlflow.db y mlruns/ para compartir experimentos
+# pero se excluyen los pesos (.pt/.pth/.onnx) que ya pesan demasiado
+mlruns/**/*.pt
+mlruns/**/*.pth
+mlruns/**/*.onnx
+mlartifacts/**/*.pt
+mlartifacts/**/*.pth
+mlartifacts/**/*.onnx
 
 # Datasets descargados de Roboflow
 BlackjackVAI-*/
