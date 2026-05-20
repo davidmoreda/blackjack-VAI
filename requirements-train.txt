@@ -1,0 +1,12 @@
+-r requirements.txt
+
+# Instala PyTorch con CUDA antes de este fichero si vas a entrenar en GPU:
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+mlflow>=2.12.0
+python-dotenv>=1.0.1
+roboflow>=1.1.0
+pandas>=2.2.0
+matplotlib>=3.8.0
+jupyter>=1.0.0
+ipykernel>=6.29.0
+tabulate>=0.9.0
