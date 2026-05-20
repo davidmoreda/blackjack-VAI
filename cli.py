@@ -66,7 +66,7 @@ class SettingsPanel:
             ("Jugadores",        "game",      "num_players",     NUM_PLAYERS_OPTIONS),
             ("Mazos",            "game",      "num_decks",       NUM_DECKS_OPTIONS),
             ("Sistema conteo",   "game",      "counting_system", COUNTING_SYSTEMS),
-            ("Confianza YOLO",   "detection", "confidence",      CONFIDENCE_OPTIONS),
+            ("Confianza modelo", "detection", "confidence",      CONFIDENCE_OPTIONS),
         ]
 
     def _current_value(self, item):
@@ -362,8 +362,10 @@ def _rebuild(cfg, cfg_file) -> tuple:
     game_cfg = cfg["game"]
     detector = CardDetector(
         model_path=det_cfg["model_path"],
+        backend=det_cfg.get("backend", "yolo"),
         confidence=det_cfg["confidence"],
         iou=det_cfg["iou"],
+        imgsz=det_cfg.get("imgsz", 1280),
     )
     cam = CameraCapture(cfg)
     counter = CardCounter(

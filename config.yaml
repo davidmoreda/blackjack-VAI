@@ -7,7 +7,9 @@ camera:
   index: "http://host.docker.internal:5050/video"
   width: 1280
 detection:
+  backend: yolo
   confidence: 0.55
+  imgsz: 1280
   inference_fps: 15
   iou: 0.45
   model_path: models/best.pt

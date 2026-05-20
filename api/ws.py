@@ -214,8 +214,10 @@ def _vision_loop():
     try:
         detector = CardDetector(
             model_path=det_cfg.get("model_path", "models/best.pt"),
+            backend=det_cfg.get("backend", "yolo"),
             confidence=det_cfg.get("confidence", 0.35),
             iou=det_cfg.get("iou", 0.45),
+            imgsz=det_cfg.get("imgsz", 1280),
         )
     except Exception as e:
         print(f"[vision] Modelo no disponible ({e}), streaming sin inferencia")

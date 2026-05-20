@@ -1,6 +1,6 @@
 # Blackjack VAI
 
-Sistema de seguimiento de blackjack en tiempo real mediante visión artificial. Detecta y clasifica cartas con YOLOv8m-seg + ByteTrack, gestiona el estado de la partida y calcula probabilidades, EV dinámico y sugerencias óptimas en una interfaz web.
+Sistema de seguimiento de blackjack en tiempo real mediante visión artificial. Detecta cartas con YOLOv8m-seg + ByteTrack, sigue el estado del juego, lleva conteo de cartas y muestra probabilidades, valor esperado (EV) y sugerencias óptimas en una interfaz web.
 
 ---
 
@@ -35,17 +35,22 @@ blackjack-VAI/
 │   └── state_machine.py   # BlackjackStateMachine: turnos, historial, marcador
 ├── vision/
 │   ├── capture.py         # CameraCapture: webcam local o stream HTTP
-│   ├── detector.py        # CardDetector: YOLO + ByteTrack → Detection[]
-│   ├── debouncer.py       # CardDebouncer: confirma carta tras 1s de presencia
-│   └── zones.py           # ZoneManager: asigna dealer / player_N por coordenadas
+│   ├── detector.py        # CardDetector: YOLO + ByteTrack, devuelve Detection[]
+│   ├── debouncer.py       # CardDebouncer: confirma carta tras 1 s de presencia
+│   ├── zones.py           # ZoneManager, build_zones, draw_zones
+│   └── zone_manager.py    # Alias / helpers de zona
 ├── models/
-│   └── best.pt            # Modelo entrenado (Git LFS)
-├── cli.py                 # Modo terminal: ventana OpenCV sin servidor web
-├── cam_server_windows.py  # Servidor MJPEG para exponer webcam de Windows a WSL/Docker
+│   └── best.pt            # Modelo entrenado (no incluido en repo)
+├── cli.py                 # Modo terminal: ventana OpenCV, sin servidor
+├── cam_server_windows.py  # Servidor MJPEG para pasar webcam de Windows a WSL
 ├── config.yaml            # Configuración global
 ├── Dockerfile
 ├── docker-compose.yml
-└── requirements.txt
+├── Dockerfile
+├── requirements.txt
+├── YOLO_blackjack_v2.ipynb
+├── YOLO_blackjack_v3.ipynb
+└── YOLO_blackjack_v4.ipynb
 ```
 
 ---
@@ -54,12 +59,12 @@ blackjack-VAI/
 
 | Fase | Estado | Descripción |
 |------|--------|-------------|
-| Dataset | ✅ | Creación, etiquetado y limpieza en Roboflow (V3 → V4) |
-| Entrenamiento | ✅ | YOLOv8m-seg con RTX 4070 Laptop + MLflow — V3, V4, V5 completados |
-| API | ✅ | FastAPI + WebSockets + endpoints REST |
-| Lógica de juego | ✅ | Máquina de estados, conteo, EV dinámico, estrategia básica |
-| Frontend | ✅ | Interfaz web en tiempo real con panel lateral |
-| Integración | ✅ | Sistema completo: webcam → detección → sugerencia |
+| 1. Dataset | ✅ | Creación, etiquetado y limpieza en Roboflow (V3 → V4) |
+| 2. Entrenamiento | 🔄 En curso | YOLOv8m-seg local con RTX 4070 + MLflow (v4 en progreso) |
+| 3. API | ✅ | FastAPI + WebSockets + endpoints REST |
+| 4. Lógica de juego | ✅ | Máquina de estados, conteo, EV dinámico, estrategia básica |
+| 5. Frontend | ✅ | Interfaz web en tiempo real con panel lateral |
+| 6. Integración | ✅ | Sistema completo webcam → detección → sugerencia |
 
 ---
 
@@ -102,18 +107,12 @@ blackjack-VAI/
 ### Lanzar entrenamiento
 
 ```bash
-# 1. Crear y activar entorno virtual (si no lo tienes ya)
-python3 -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-
-# 2. Instalar dependencias
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-pip install lapx>=0.5.2
 pip install -r requirements.txt
-pip install jupyter
 
-# 3. Abrir el notebook correspondiente
-jupyter notebook YOLO_blackjack_v5.ipynb
+# Arrancar el servidor
+python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+# Abre http://localhost:8000
 ```
 
 ### Seguimiento con MLflow
@@ -121,49 +120,38 @@ jupyter notebook YOLO_blackjack_v5.ipynb
 La base de datos MLflow está en el propio repositorio (`mlflow.db`, excluida de git).
 
 ```bash
-# Desde la raíz del proyecto
-mlflow ui --backend-store-uri sqlite:///mlflow.db --host 0.0.0.0 --port 5001
-# http://localhost:5001
+python cli.py
 ```
 
----
+Controles de teclado:
 
-## Instalación y uso
+| Tecla | Acción |
+|-------|--------|
+| `S` | Nueva partida |
+| `R` | Nueva ronda |
+| `ESPACIO` | Stand del jugador activo |
+| `Z` | Deshacer última carta |
+| `H` | Abrir navegador de historial |
+| `P` | Abrir panel de configuración |
+| `Q` | Salir |
 
-### 1. Requisitos previos del sistema
+En el navegador de historial (`H`):
 
-Instala las siguientes herramientas si aún no las tienes:
+| Tecla | Acción |
+|-------|--------|
+| `↑ / ↓` | Navegar entre cartas |
+| `X` / `DEL` | Eliminar carta seleccionada |
+| `H` / `ESC` | Cerrar navegador |
 
-**Git y Git LFS** (necesario para descargar el modelo `best.pt`):
-```bash
-# Ubuntu/Debian
-sudo apt update && sudo apt install git git-lfs -y
-git lfs install
-```
+En el panel de configuración (`P`):
 
-**Docker y Docker Compose** (para ejecutar la app en contenedor):
-```bash
-# Ubuntu/Debian
-sudo apt install docker.io docker-compose-plugin -y
-sudo usermod -aG docker $USER   # permite usar docker sin sudo (reinicia sesión)
-```
-> En Windows instala [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+| Tecla | Acción |
+|-------|--------|
+| `↑ / ↓` | Navegar opciones |
+| `← / →` | Cambiar valor |
+| `P` / `ESC` | Guardar y cerrar |
 
-**Python 3.10+** (solo necesario para las opciones sin Docker):
-```bash
-sudo apt install python3 python3-pip python3-venv -y
-```
-
-**NVIDIA Container Toolkit** (opcional — solo si tienes GPU NVIDIA y quieres usarla en Docker):
-```bash
-# Guía oficial: https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html
-sudo apt install nvidia-container-toolkit -y
-sudo systemctl restart docker
-```
-
----
-
-### 2. Clonar el repositorio
+### Opción C — Docker
 
 ```bash
 git clone <url-del-repo>
@@ -212,8 +200,7 @@ WSL2 no tiene acceso directo a la webcam USB. Se expone la cámara desde Windows
 **1. En Windows** (PowerShell o CMD, **no** WSL)
 
 ```powershell
-pip install flask opencv-python
-python cam_server_windows.py
+uv run --with flask --with opencv-python python cam_server_windows.py
 ```
 
 Salida esperada:
@@ -362,7 +349,78 @@ Base URL: `http://localhost:8000`
 
 ---
 
-## Sistemas de conteo
+## Pipeline de detección
+
+```
+Webcam (30 fps)
+  └─ CameraCapture.read()
+       └─ CardDetector.detect()         ← YOLOv8m-seg + ByteTrack (15 fps)
+            └─ ZoneManager.get_zone()   ← asigna dealer / player_N
+                 └─ CardDebouncer.tick() ← confirma tras 1 s de presencia
+                      └─ BlackjackStateMachine.add_card()
+                           └─ CardCounter.register()   ← Hi-Lo / KO / Omega II
+                           └─ DeckTracker.remove()     ← composición del zapato
+                           └─ suggest_action_with_ev() ← EV dinámico
+```
+
+### CardDebouncer
+
+Evita falsos positivos: una carta debe estar presente en la zona asignada durante **1 segundo continuo** antes de registrarse. Si desaparece antes, el contador se resetea. La barra de progreso bajo cada bbox muestra el tiempo acumulado.
+
+### EV dinámico
+
+El calculador (`ev_calculator.py`) computa el valor esperado real de cada acción usando la composición residual del zapato:
+
+- Usa `lru_cache` con hasta 100 000 entradas por función
+- La distribución del zapato se redondea a 4 decimales para colapsar estados similares (~1000× más rápido que simulación exacta, error < 0.001 EV)
+- El dealer sigue las reglas estándar (se planta en 17 duro, configurable soft-17)
+- SPLIT aún usa la tabla de estrategia básica (EV de split requiere modelar dos manos independientes)
+
+---
+
+## Zonas de la mesa
+
+Las zonas se generan dinámicamente según `num_players`:
+
+- **Dealer**: franja superior (40 % del alto, ancho completo)
+- **Player 1…N**: franja inferior (60 % del alto) dividida en N columnas iguales
+
+El overlay en el feed de cámara muestra:
+- Rectángulo semitransparente por zona con color identificativo
+- Total de la mano centrado en grande
+- `BUST!` en rojo parpadeante / `BLACKJACK!` en dorado / `21 !` cuando corresponde
+- Bboxes YOLO con máscara de segmentación y barra de progreso del debouncer
+
+---
+
+## config.yaml
+
+```yaml
+api:
+  host: 0.0.0.0
+  port: 8080
+
+camera:
+  index: 0          # índice de webcam o URL HTTP para WSL
+  fps: 30
+  width: 1280
+  height: 720
+
+detection:
+  model_path: models/best.pt
+  confidence: 0.55
+  iou: 0.45
+  inference_fps: 15  # inferencias YOLO por segundo
+
+game:
+  num_players: 1
+  num_decks: 1
+  counting_system: hilo  # hilo | ko | omega2
+```
+
+---
+
+## Sistemas de conteo soportados
 
 | Sistema | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10/J/Q/K | A |
 |---------|---|---|---|---|---|---|---|---|----------|---|
@@ -370,7 +428,120 @@ Base URL: `http://localhost:8000`
 | KO | +1 | +1 | +1 | +1 | +1 | +1 | 0 | 0 | −1 | −1 |
 | Omega II | +1 | +1 | +2 | +2 | +2 | +1 | 0 | −1 | −2 | 0 |
 
-**True count** = running count / mazos restantes en el zapato.
+El **true count** = running count / mazos restantes en el zapato.
+
+---
+
+## Clases del dataset
+
+54 clases en total:
+
+| Palo | Símbolo | Clases |
+|------|---------|--------|
+| Spades (picas) | S | A Spades … K Spades |
+| Hearts (corazones) | H | A Hearts … K Hearts |
+| Diamonds (diamantes) | D | A Diamonds … K Diamonds |
+| Clubs (tréboles) | C | A Clubs … K Clubs |
+| Especiales | — | card_back, Joker |
+
+---
+
+## Entrenamiento del modelo
+
+### Historial del dataset
+
+| Versión | Imágenes | Preprocesado | Augmentations | Resultado |
+|---------|----------|--------------|---------------|-----------|
+| **V1** | ~10 506 | Auto-Orient, Tiling 2×2, **Grayscale**, Contrast adaptativo | Múltiples (Roboflow) | ❌ No detecta en webcam — grayscale vs color en tiempo real |
+| **V2** | ~3 741 | Auto-Orient, Resize 640×640 | Ninguna | ❌ No se usó para entrenar |
+| **V3** | ~3 741 | Auto-Orient, Resize 640×640 | **Ninguna** (las hace YOLO) | ✅ mAP50=0.954 — funciona bien de cerca |
+| **V4** | ~3 741+ | Auto-Orient, **Letterbox** (sin distorsión) | Augmentation agresivo para distancia | 🔄 En entrenamiento |
+
+Errores en V1:
+1. **Grayscale** → el modelo aprendió imágenes en gris pero la webcam envía color
+2. **Tiling 2×2** → el modelo vio recortes de cartas, no frames completos
+3. **imgsz mismatch** → entrenado a 960 px, inferencia a 640 px
+4. **Bug de ruta** → el notebook descargaba V2 pero usaba la ruta de V1
+
+### V3 — configuración
+
+- **Preprocessing:** Auto-Orient + Resize 640×640 (Stretch)
+- **Augmentations:** YOLO — scale=0.30, mosaic=1.0, flipud=0.15, fliplr=0.50, mixup=0.15, copy_paste=0.20
+- **Split:** 80 % train / 10 % val / 10 % test
+- **Resultado:** mAP50(box)=0.954, mAP50-95(box)=0.948
+
+### V4 — configuración (producción)
+
+- **Preprocessing:** Auto-Orient + **Letterbox** (padding gris, sin distorsión de cartas)
+- **Split:** **90 % train / 10 % val** (test fusionado en train para maximizar datos de producción)
+- **Augmentations agresivas para detección a distancia:**
+
+| Parámetro | V3 | V4 | Efecto |
+|-----------|----|----|--------|
+| `scale` | 0.30 | **0.70** | Cartas al 30% del tamaño → simula cámara lejana |
+| `copy_paste` | 0.20 | **0.50** | Pega cartas sobre fondos variados |
+| `erasing` | — | **0.40** | Oclusión por manos/fichas |
+| `perspective` | — | **0.0008** | Ángulo de webcam sobre la mesa |
+| `shear` | 2.0 | **6.0** | Perspectiva lateral |
+| `degrees` | 10 | **15** | Más rotación |
+| `close_mosaic` | 10 | **15** | Más epochs con mosaic |
+
+- **Inferencia:** `imgsz=1280` (resolución nativa webcam) para detección óptima a distancia
+
+### Configuración de entrenamiento local
+
+| Parámetro | V3 | V4 |
+|-----------|----|----|
+| GPU | RTX 4070 Laptop (8 GB VRAM) | RTX 4070 Laptop (8 GB VRAM) |
+| Modelo base | `yolov8m-seg.pt` | `yolov8m-seg.pt` |
+| Epochs | 100 (patience 20) | 120 (patience 25) |
+| imgsz (train) | 640 | 640 |
+| imgsz (infer) | 640 | **1280** |
+| Batch | 8 | 8 |
+| Tracking | MLflow | MLflow (mismo DB) |
+
+### Lanzar entrenamiento V4
+
+```bash
+# Activar el entorno con MLflow y ultralytics
+source "/home/dmore/code/Máster IA/01.-MASTER COURSES/12.- MLOPS Y AI BI/mlops_env/.venv/bin/activate"
+
+jupyter notebook YOLO_blackjack_v4.ipynb
+```
+
+### Reanudar entrenamiento interrumpido
+
+```python
+RESUME = True  # valor por defecto en ambos notebooks
+```
+
+### Seguimiento con MLflow
+
+```bash
+cd "/home/dmore/code/Máster IA/01.-MASTER COURSES/12.- MLOPS Y AI BI/mlops_env"
+mlflow ui --backend-store-uri sqlite:///mlflow.db --host 0.0.0.0 --port 5001
+# http://localhost:5001
+```
+
+Los experimentos `blackjackvai-v3` y `blackjackvai-v4` están en el mismo `mlflow.db`.  
+Métricas por epoch: `box_loss`, `seg_loss`, `cls_loss`, `mAP50`, `mAP50-95`.
+
+### Estructura tras el entrenamiento
+
+```
+training_runs/runs/yolo8m_seg_v4/
+├── weights/
+│   ├── best.pt
+│   ├── last.pt
+│   └── epoch10.pt
+├── results.csv
+└── *.png
+
+models/
+├── best_v3_YYYYMMDD_HHMM.pt
+├── best_v4_YYYYMMDD_HHMM.pt
+└── best.pt  →  best_v4_...pt  (symlink al último)
+```
 
 ---
 

@@ -1,10 +1,10 @@
-"""Inferencia YOLOv8 + ByteTrack sobre frames de la camara."""
+"""Inferencia Ultralytics + ByteTrack sobre frames de la camara."""
 
 import cv2
 from dataclasses import dataclass, field
 from typing import List, Optional
 import numpy as np
-from ultralytics import YOLO
+from ultralytics import RTDETR, YOLO
 
 
 @dataclass
@@ -18,10 +18,27 @@ class Detection:
 
 
 class CardDetector:
-    def __init__(self, model_path: str, confidence: float = 0.35, iou: float = 0.45):
-        self.model = YOLO(model_path)
+    def __init__(
+        self,
+        model_path: str,
+        backend: str = "yolo",
+        confidence: float = 0.35,
+        iou: float = 0.45,
+        imgsz: int = 1280,
+    ):
+        backend_key = backend.lower()
+        model_cls = {
+            "yolo": YOLO,
+            "rtdetr": RTDETR,
+        }.get(backend_key)
+        if model_cls is None:
+            raise ValueError(f"Backend no soportado: {backend!r}. Usa 'yolo' o 'rtdetr'.")
+
+        self.model = model_cls(model_path)
+        self.backend = backend_key
         self.confidence = confidence
         self.iou = iou
+        self.imgsz = int(imgsz)
 
     @staticmethod
     def _enhance(frame: np.ndarray) -> np.ndarray:
@@ -37,8 +54,8 @@ class CardDetector:
     def detect(self, frame: np.ndarray) -> List[Detection]:
         """
         Usa model.track() con ByteTrack para mantener IDs estables entre frames.
-        El tracker predice posición con filtro de Kalman cuando YOLO falla un frame,
-        eliminando el parpadeo sin añadir ghosting artificial.
+        El tracker predice posicion con filtro de Kalman cuando el detector falla
+        un frame, eliminando el parpadeo sin anadir ghosting artificial.
         persist=True mantiene el estado del tracker entre llamadas.
         """
         frame = self._enhance(frame)
@@ -46,7 +63,7 @@ class CardDetector:
             frame,
             conf=self.confidence,
             iou=self.iou,
-            imgsz=1280,
+            imgsz=self.imgsz,
             persist=True,          # estado del tracker persiste entre frames
             tracker="bytetrack.yaml",
             verbose=False,
