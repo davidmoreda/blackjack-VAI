@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv export_rtdetr/models/best_rtdetr_v1.pt models/best_rtdetr_v1.pt)",
+      "Bash(mv export_rtdetr/models/best_rtdetr_v1_20260520_2125.pt models/best_rtdetr_v1_20260520_2125.pt)",
+      "Bash(cd \"c:/Users/javie/OneDrive/Escritorio/Master/Vision Artificial/blackjack-VAI\" && \\\\ *)",
+      "Bash(mv export_rtdetr/mlflow.db mlflow.db)",
+      "Bash(mv export_rtdetr/mlruns mlruns)"
+    ]
+  }
+}
