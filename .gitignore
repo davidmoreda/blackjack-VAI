@@ -29,12 +29,19 @@ dataset/roboflow/
 
 # Runs de entrenamiento YOLO
 training_runs/
+runs/
 
-# MLflow (solo excluir duplicado de runs/)
+# MLflow tracking y artifacts (outputs locales, no código)
+mlruns/
+mlartifacts/
+mlflow.db
 
 # Jupyter checkpoints
 .ipynb_checkpoints/
 
 # Documentación generada localmente
 ESTRUCTURA.md
-comparison_runs/val/*/predictions.json
+
+# Python cache
+__pycache__/
+*.pyc
