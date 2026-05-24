@@ -4,7 +4,13 @@
       "Bash(dir *)",
       "Bash(uv run *)",
       "Bash(curl *)",
-      "Bash(uv pip *)"
+      "Bash(uv pip *)",
+      "Bash(Select-Object Name)",
+      "Bash(git mv *)",
+      "Bash(git rm *)",
+      "Bash(rmdir comparison_runs)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

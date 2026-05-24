@@ -4,7 +4,7 @@ api:
 camera:
   fps: 30
   height: 720
-  index: "http://host.docker.internal:5050/video"
+  index: 0
   width: 1280
 detection:
   backend: yolo
