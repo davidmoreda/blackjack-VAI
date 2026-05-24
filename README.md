@@ -545,6 +545,78 @@ models/
 
 ---
 
+## Comparación de modelos — YOLOv8m-seg vs RT-DETR-L
+
+Para validar la elección de arquitectura se entrenó un segundo detector, **RT-DETR-L** (Real-Time Detection Transformer, Baidu 2023), sobre el mismo dataset y se comparó cabeza a cabeza con el modelo de producción.
+
+### Por qué RT-DETR como modelo alternativo
+
+| Aspecto | YOLOv8m-seg | RT-DETR-L |
+|---|---|---|
+| Familia | CNN (anchor-based, NMS) | **Transformer** (anchor-free, sin NMS) |
+| Backbone | CSPDarknet | HGNetv2 + Transformer encoder/decoder |
+| Postproceso | NMS | Hungarian matching |
+| Parámetros | ~27 M | ~32 M |
+| API ultralytics | `YOLO` | `RTDETR` |
+
+La narrativa académica es la comparación entre el paradigma convolucional dominante (YOLO) y el paradigma Transformer emergente (RT-DETR) en detección real-time sobre un dataset propio de 54 clases.
+
+### Metodología de matching
+
+Para que la comparación fuera científicamente válida, el RT-DETR se entrenó replicando **el régimen de entrenamiento** de YOLO V4:
+
+| Tipo | Variables | Valor |
+|---|---|---|
+| **Igualadas** | epochs, patience, batch, imgsz, seed, warmup_epochs, close_mosaic, augmentations | 120, 25, 8, 640, 42, 3, 20, idénticas |
+| **Específicas por arquitectura** | optimizer, lr0 | YOLO: SGD lr0=0.001 / RT-DETR: AdamW lr0=0.0001 |
+
+El optimizer y el learning rate no se igualan porque cada arquitectura tiene su régimen óptimo (es la práctica estándar en papers de comparación).
+
+### Resultados — calidad de detección
+
+Evaluado sobre el mismo split `val` (644 imágenes, BlackjackVAI V4), `conf=0.001`, `iou=0.6`:
+
+| Métrica | YOLOv8m-seg V5 | RT-DETR-L matched | Δ |
+|---|---:|---:|---:|
+| **mAP50(box)** | **0.9862** | 0.9804 | −0.58 pt |
+| **mAP50-95(box)** | **0.9802** | 0.9158 | **−6.44 pt** |
+| Precision | **0.9797** | 0.9688 | −1.09 pt |
+| Recall | **0.9839** | 0.9752 | −0.87 pt |
+
+### Resultados — coste e inferencia
+
+Benchmark sobre RTX 4070 Laptop, imgsz=640, 200 imágenes con 20 de warm-up:
+
+| Métrica | YOLOv8m-seg V5 | RT-DETR-L matched |
+|---|---:|---:|
+| Parámetros | 27.25 M | 32.09 M |
+| Tamaño .pt en disco | 54.9 MB | 66.4 MB |
+| Latencia media | 61.2 ms | 74.4 ms |
+| Latencia p95 | 64.7 ms | 85.5 ms |
+| **FPS efectivo** | **16.3** | 13.4 |
+| VRAM pico | 673 MB | 663 MB |
+
+### Conclusión
+
+**YOLOv8m-seg V5 supera a RT-DETR-L en todos los ejes relevantes** bajo configuración de entrenamiento equivalente:
+
+1. **Calidad de localización (mAP50-95):** YOLO produce bboxes más ajustados (+6.44 pt). RT-DETR detecta correctamente las cartas pero su loss GIoU genera cajas más laxas. Para detección bruta (mAP50) la diferencia es marginal (~0.6 pt), ambos al techo del dataset.
+
+2. **Velocidad:** YOLO es ~21% más rápido (16.3 vs 13.4 FPS). Para el objetivo real-time (15 FPS de inferencia configurados en producción), YOLO va sobrado; RT-DETR queda al límite.
+
+3. **Coste de despliegue:** YOLO ocupa 12 MB menos en disco, usa 5 M parámetros menos y tiene latencia p95 21 ms más baja.
+
+4. **Decisión:** YOLOv8m-seg permanece como modelo de producción. RT-DETR queda como baseline alternativo entrenado y disponible (`models/best_rtdetr_matched.pt`) para experimentación futura.
+
+### Reproducibilidad
+
+- Notebook de entreno RT-DETR: [RTDETR_blackjack_match_yolo.ipynb](RTDETR_blackjack_match_yolo.ipynb) (lanzable en Colab con GPU T4, ~2.7 h)
+- Notebook de comparación: [compare_models.ipynb](compare_models.ipynb)
+- Outputs: [comparison_runs/](comparison_runs/) — `comparison_summary.csv`, `comparison_metrics.png`, `qualitative_grid.png`, matrices de confusión y curvas P/R/F1 por modelo
+- Tracking MLflow: experimentos `blackjackvai-v4`, `blackjackvai-rtdetr-matched` en `mlflow.db`
+
+---
+
 ## Licencia
 
 Proyecto académico — Máster en Inteligencia Artificial.

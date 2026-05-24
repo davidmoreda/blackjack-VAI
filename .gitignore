@@ -37,3 +37,4 @@ training_runs/
 
 # Documentación generada localmente
 ESTRUCTURA.md
+comparison_runs/val/*/predictions.json
