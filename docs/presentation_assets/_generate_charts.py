@@ -14,11 +14,11 @@ cur = con.cursor()
 
 plt.style.use("dark_background")
 COLORS = {
-    "V3":      "#8b95a8",
-    "V4":      "#60a5fa",
-    "V5":      "#8b95a8",   # gris claro
+    "V3":      "#6b7280",   # gris medio
+    "V4":      "#60a5fa",   # azul
+    "V5":      "#a78bfa",   # lila
     "V6":      "#D4A017",   # dorado: modelo de produccion
-    "RT-DETR": "#f87171",
+    "RT-DETR": "#f87171",   # rojo coral
 }
 
 RUNS = [
@@ -80,7 +80,7 @@ for ax, title in [(axes[0], "mAP@50 por epoch"),
     ax.grid(alpha=0.2)
     ax.legend(loc="lower right", fontsize=10)
 
-plt.suptitle("Evolucion de modelos - BlackjackVAI V4 (split val)",
+plt.suptitle("Evolucion de modelos",
              fontsize=14, fontweight="bold", color="#D4A017")
 plt.tight_layout()
 plt.savefig(OUT / "01_evolucion_modelos.png", dpi=160, bbox_inches="tight",
@@ -351,5 +351,106 @@ if csv_path.exists():
     print("04_comparativa_inferencia.png")
 else:
     print("AVISO: no encontre", csv_path)
+
+# ---------- 10) Losses comparativos - hold-on de los 5 modelos (V6 resaltado) ----------
+# YOLO loss schema: train/{box,cls,dfl,seg}_loss + val/*
+# RT-DETR loss schema: train/{cls,giou,l1}_loss + val/*
+# -> RT-DETR solo se superpone en el panel "Classification" (cls_loss),
+#    en el resto se anota "no aplica" (arquitectura distinta).
+loss_panels_compare = [
+    ("box_loss", "Box Loss",       True),
+    ("cls_loss", "Classification", True),   # RT-DETR si aplica aqui
+    ("dfl_loss", "DFL Loss",       False),
+    ("seg_loss", "Segmentation",   False),
+]
+for split in ("train", "val"):
+    fig, axes = plt.subplots(2, 2, figsize=(14, 9))
+    for ax, (key, title, rtdetr_ok) in zip(axes.flatten(), loss_panels_compare):
+        for label, run_id, backend in RUNS:
+            if not run_id:
+                continue
+            if backend == "rtdetr" and not rtdetr_ok:
+                continue
+            s, v = get_history(run_id, [f"{split}/{key}"])
+            if not s:
+                continue
+            is_v6 = (label == "V6")
+            ax.plot(
+                s, v,
+                label=label,
+                color=COLORS[label],
+                linewidth=3.2 if is_v6 else 1.6,
+                alpha=1.0 if is_v6 else 0.85,
+                zorder=5 if is_v6 else 2,
+            )
+        ax.set_title(title, fontsize=12, fontweight="bold")
+        ax.set_xlabel("Epoch")
+        ax.set_ylabel(f"{split} loss")
+        ax.grid(alpha=0.2)
+        ax.legend(fontsize=9, loc="upper right")
+        if not rtdetr_ok:
+            ax.text(
+                0.98, 0.02, "RT-DETR: no aplica\n(arquitectura distinta)",
+                transform=ax.transAxes, ha="right", va="bottom",
+                fontsize=8, color="#9ca3af", alpha=0.85,
+            )
+    plt.suptitle(
+        f"Comparativa de {split} losses por modelo (V6 resaltado)",
+        fontsize=14, fontweight="bold", color="#D4A017",
+    )
+    plt.tight_layout()
+    out_path = OUT / f"10_compare_{split}_losses.png"
+    plt.savefig(out_path, dpi=160, bbox_inches="tight", facecolor="#0e1117")
+    plt.close()
+    print(out_path.name)
+
+# ---------- 11) mAP comparativos - hold-on de los 5 modelos (V6 resaltado) ----------
+# RT-DETR es detector puro -> sin mask mAP. En los paneles Mask se anota "no aplica".
+map_panels_compare = [
+    ("metrics/mAP50B",    "Box mAP@50",     True),
+    ("metrics/mAP50-95B", "Box mAP@50-95",  True),
+    ("metrics/mAP50M",    "Mask mAP@50",    False),
+    ("metrics/mAP50-95M", "Mask mAP@50-95", False),
+]
+fig, axes = plt.subplots(2, 2, figsize=(14, 9))
+for ax, (key, title, rtdetr_ok) in zip(axes.flatten(), map_panels_compare):
+    for label, run_id, backend in RUNS:
+        if not run_id:
+            continue
+        if backend == "rtdetr" and not rtdetr_ok:
+            continue
+        s, v = get_history(run_id, [key])
+        if not s:
+            continue
+        is_v6 = (label == "V6")
+        ax.plot(
+            s, v,
+            label=label,
+            color=COLORS[label],
+            linewidth=3.2 if is_v6 else 1.6,
+            alpha=1.0 if is_v6 else 0.85,
+            zorder=5 if is_v6 else 2,
+        )
+    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("mAP")
+    ax.set_ylim(0.80, 1.0)
+    ax.grid(alpha=0.2)
+    ax.legend(fontsize=9, loc="lower right")
+    if not rtdetr_ok:
+        ax.text(
+            0.98, 0.02, "RT-DETR: solo deteccion\n(sin mask mAP)",
+            transform=ax.transAxes, ha="right", va="bottom",
+            fontsize=8, color="#9ca3af", alpha=0.85,
+        )
+plt.suptitle(
+    "Comparativa de mAP por modelo (V6 resaltado)",
+    fontsize=14, fontweight="bold", color="#D4A017",
+)
+plt.tight_layout()
+plt.savefig(OUT / "11_compare_mAP.png", dpi=160, bbox_inches="tight",
+            facecolor="#0e1117")
+plt.close()
+print("11_compare_mAP.png")
 
 print("\nDone. Output:", OUT)
