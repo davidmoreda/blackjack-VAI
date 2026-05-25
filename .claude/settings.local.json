@@ -13,7 +13,12 @@
       "Bash(git commit -m ' *)",
       "Bash(Get-ChildItem -Recurse -Force)",
       "Bash(Select-Object -First 100)",
-      "Bash(Format-Table FullName)"
+      "Bash(Format-Table FullName)",
+      "Bash(python -c \"from PIL import Image; print\\('PIL ok'\\)\")",
+      "Bash(python _gen_tiling.py)",
+      "Bash(del *)",
+      "Bash(python -c ' *)",
+      "Bash(pip install *)"
     ]
   }
 }
