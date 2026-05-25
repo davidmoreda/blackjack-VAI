@@ -221,10 +221,7 @@ class BlackjackStateMachine:
         """Recalcula sugerencias y EVs para todos los jugadores. Se llama solo
         cuando algo del estado cambia, no cada frame."""
         self._suggestions = {}
-        if not self.dealer_hand.cards:
-            self._suggestions_dirty = False
-            return
-        dealer_upcard = self.dealer_hand.cards[0]
+        dealer_upcard = self.dealer_hand.cards[0] if self.dealer_hand.cards else None
         for pid, hand in self.player_hands.items():
             if hand.bust or hand.stood or len(hand.cards) < 2:
                 self._suggestions[pid] = (None, None)

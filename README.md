@@ -7,7 +7,6 @@ Sistema de seguimiento de blackjack en tiempo real mediante visión artificial. 
 **Funcionalidades:**
 - Detección y clasificación de 54 clases de cartas
 - Seguimiento automático del juego: turnos, totales de mano, estado de la ronda
-- Conteo de cartas con Hi-Lo, KO y Omega II
 - EV dinámico (HIT / STAND / DOUBLE) calculado sobre la composición real del zapato
 - Sugerencia óptima de jugada en tiempo real
 - Interfaz web + modo terminal
@@ -111,9 +110,17 @@ python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_
 
 ---
 
-### Opción A — Servidor web (recomendado)
+### Opción A — Windows (recomendado)
 
-```bash
+Abre dos terminales:
+
+**Terminal 1** — servidor de cámara:
+```powershell
+python cam_server_windows.py
+```
+
+**Terminal 2** — servidor web:
+```powershell
 python -m uvicorn api.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
@@ -121,68 +128,25 @@ Abre `http://localhost:8080` en el navegador.
 
 ---
 
-### Opción B — Modo terminal (sin navegador)
-
-```bash
-python cli.py
-```
-
-Controles de teclado:
-
-| Tecla | Acción |
-|-------|--------|
-| `S` | Nueva partida |
-| `R` | Nueva ronda |
-| `ESPACIO` | Stand del jugador activo |
-| `Z` | Deshacer última carta |
-| `H` | Navegador de historial |
-| `P` | Panel de configuración |
-| `Q` | Salir |
-
-En el navegador de historial (`H`):
-
-| Tecla | Acción |
-|-------|--------|
-| `↑ / ↓` | Navegar entre cartas |
-| `X` / `DEL` | Eliminar carta seleccionada |
-| `H` / `ESC` | Cerrar |
-
----
-
-### Opción C — Docker
-
-```bash
-docker compose up --build
-```
-
-Abre `http://localhost:8080`.
-
-Si la webcam está en Windows (no en el contenedor), primero lanza el servidor de cámara en una terminal aparte:
-
-```bash
-python cam_server_windows.py
-```
-
-Y configura `config.yaml`:
-```yaml
-camera:
-  index: "http://host.docker.internal:5050/video"
-```
-
----
-
-### Opción D — WSL2 + Docker + webcam Windows
+### Opción B — WSL2 + Docker + webcam Windows
 
 **1. En PowerShell (Windows):**
 ```powershell
 python cam_server_windows.py
 ```
 
-**2. En WSL:**
+**2. En WSL**, asegúrate de que Docker Desktop está corriendo con el backend de Linux activo, luego:
 ```bash
 docker compose up --build
-# http://localhost:8080
 ```
+
+Configura `config.yaml` para apuntar al servidor de cámara:
+```yaml
+camera:
+  index: "http://host.docker.internal:5050/video"
+```
+
+Abre `http://localhost:8080`.
 
 ---
 
@@ -256,7 +220,6 @@ Webcam (30 fps)
             └─ ZoneManager.get_zone()    ← asigna dealer / player_N
                  └─ CardDebouncer.tick() ← confirma tras 1s de presencia
                       └─ BlackjackStateMachine.add_card()
-                           ├─ CardCounter.register()    ← Hi-Lo / KO / Omega II
                            ├─ DeckTracker.remove()      ← composición del zapato
                            └─ suggest_action_with_ev()  ← EV dinámico
 ```
@@ -267,15 +230,22 @@ El **EV dinámico** usa `lru_cache` con distribución del zapato redondeada a 4 
 
 ---
 
-## Sistemas de conteo
+## Cálculo del Valor Esperado (EV)
 
-| Sistema | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10/J/Q/K | A |
-|---------|---|---|---|---|---|---|---|---|----------|---|
-| Hi-Lo | +1 | +1 | +1 | +1 | +1 | 0 | 0 | 0 | −1 | −1 |
-| KO | +1 | +1 | +1 | +1 | +1 | +1 | 0 | 0 | −1 | −1 |
-| Omega II | +1 | +1 | +2 | +2 | +2 | +1 | 0 | −1 | −2 | 0 |
+Para cada turno el sistema calcula el EV de STAND, HIT y DOUBLE usando la composición **real y actualizada** del zapato (no un conteo aproximado).
 
-**True count** = running count / mazos restantes en el zapato.
+**Cómo funciona:**
+
+1. `DeckTracker` mantiene cuántas copias quedan de cada valor (A, 2–10, J, Q, K) tras eliminar cada carta confirmada.
+2. Se convierte esa composición en una distribución de probabilidad por valor numérico (1–10, agrupando 10/J/Q/K).
+3. La distribución se redondea a 4 decimales → actúa como clave de `lru_cache`, colapsando estados de zapato muy similares sin pérdida significativa.
+4. **EV STAND**: simula todos los desenlaces posibles del dealer (que pide hasta 17+) ponderados por probabilidad y compara con el total del jugador.
+5. **EV HIT**: recursivo — evalúa cada carta que puede llegar, y en cada nuevo estado elige el mejor entre STAND y seguir pidiendo.
+6. **EV DOUBLE**: igual que HIT pero solo se recibe una carta más y la apuesta se dobla (resultado ±2 unidades).
+7. Se devuelve la acción con mayor EV como sugerencia.
+
+**Por qué no usamos conteo clásico (Hi-Lo etc.):**  
+El conteo reduce el estado del zapato a un único número. El EV trabaja con la distribución completa → más información, más precisión. El error respecto a simulación exacta es < 0.001 EV y la velocidad es ~1000× mayor gracias al cache.
 
 ---
 

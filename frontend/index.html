@@ -149,59 +149,6 @@
       color: var(--text-dim); margin-top: 8px; letter-spacing: 1px;
     }
 
-    /* ── COUNT DISPLAY ── */
-    #count-main {
-      display: flex; justify-content: space-between;
-      align-items: flex-end; margin-bottom: 14px;
-    }
-    .count-big-label {
-      font-size: 0.65rem; font-weight: 600; letter-spacing: 1.5px;
-      text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px;
-    }
-    #running-count {
-      font-family: 'Roboto Mono', monospace;
-      font-size: 3rem; font-weight: 700; line-height: 1;
-      color: var(--text); transition: color 0.4s;
-    }
-    #running-count.positive { color: var(--green-pos); }
-    #running-count.negative { color: var(--red-neg); }
-    #true-count-wrap { text-align: right; }
-    #true-count {
-      font-family: 'Roboto Mono', monospace;
-      font-size: 1.8rem; font-weight: 700; color: var(--blue-acc);
-    }
-
-    .adv-bar-wrap { margin-bottom: 14px; }
-    .adv-bar-labels {
-      display: flex; justify-content: space-between;
-      font-size: 0.6rem; color: var(--text-dim);
-      margin-bottom: 4px; letter-spacing: 1px; text-transform: uppercase;
-    }
-    .adv-bar-bg {
-      height: 6px; background: #1a2e1e;
-      border-radius: 3px; overflow: hidden;
-      border: 1px solid var(--border);
-    }
-    #adv-bar-fill {
-      height: 100%; width: 50%;
-      background: var(--text-dim); border-radius: 3px;
-      transition: width 0.5s ease, background 0.5s ease;
-    }
-
-    .count-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .count-cell {
-      background: var(--panel2); border: 1px solid var(--border);
-      border-radius: 6px; padding: 8px 10px;
-    }
-    .count-cell-label {
-      font-size: 0.6rem; font-weight: 600; letter-spacing: 1px;
-      text-transform: uppercase; color: var(--text-dim); margin-bottom: 3px;
-    }
-    .count-cell-val {
-      font-family: 'Roboto Mono', monospace;
-      font-size: 1.05rem; font-weight: 700; color: var(--text);
-    }
-
     /* ── SUGGESTION ── */
     #suggestion-box {
       border-radius: 8px; padding: 14px; text-align: center;
@@ -510,39 +457,6 @@
           </div>
         </div>
         <div id="rounds-count">0 rondas</div>
-      </div>
-
-      <!-- CONTEO -->
-      <div class="section">
-        <div class="section-title" id="count-title">Conteo</div>
-        <div id="count-main">
-          <div>
-            <div class="count-big-label">Running Count</div>
-            <div id="running-count">0</div>
-          </div>
-          <div id="true-count-wrap">
-            <div class="count-big-label" style="text-align:right">True Count</div>
-            <div id="true-count">0.0</div>
-          </div>
-        </div>
-        <div class="adv-bar-wrap">
-          <div class="adv-bar-labels">
-            <span>Casa</span><span>Ventaja</span><span>Jugador</span>
-          </div>
-          <div class="adv-bar-bg">
-            <div id="adv-bar-fill"></div>
-          </div>
-        </div>
-        <div class="count-grid">
-          <div class="count-cell">
-            <div class="count-cell-label">Mazos rest.</div>
-            <div class="count-cell-val" id="decks-remaining">6.0</div>
-          </div>
-          <div class="count-cell">
-            <div class="count-cell-label">Cartas vistas</div>
-            <div class="count-cell-val" id="cards-seen">0</div>
-          </div>
-        </div>
       </div>
 
       <!-- RECOMENDACION + EV -->

@@ -207,6 +207,37 @@ def evaluate(
     return dict(_evaluate_cached(player_hand, dealer_vals[0], probs, can_d, hits_soft_17))
 
 
+def evaluate_unknown_dealer(
+    player_cards: List[str],
+    tracker: DeckTracker,
+    can_double: bool = True,
+    hits_soft_17: bool = False,
+) -> Dict[str, float]:
+    """EV cuando la carta del dealer es desconocida.
+
+    Promedia el EV sobre todos los valores posibles de carta del dealer,
+    ponderados por su probabilidad en el zapato actual.
+    """
+    player_hand = _labels_to_values(player_cards)
+    if not player_hand:
+        return {}
+    probs = _probs_tuple(tracker)
+    if not probs:
+        return {}
+    can_d = can_double and len(player_cards) == 2
+
+    actions = ["STAND", "HIT"] + (["DOUBLE"] if can_d else [])
+    totals: Dict[str, float] = {a: 0.0 for a in actions}
+
+    for dealer_val, dealer_prob in probs:
+        evs = dict(_evaluate_cached(player_hand, dealer_val, probs, can_d, hits_soft_17))
+        for action in actions:
+            if action in evs:
+                totals[action] += dealer_prob * evs[action]
+
+    return totals
+
+
 def best_action(evs: Dict[str, float]) -> str:
     if not evs:
         return "WAIT"

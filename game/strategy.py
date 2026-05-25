@@ -52,7 +52,8 @@ def suggest_action(player_cards: list, dealer_upcard: str | None) -> str:
     if len(player_cards) < 2:
         return "WAIT"
     if dealer_upcard is None:
-        return "WAIT"
+        # Sin carta del dealer usamos dealer=10 (peor caso más frecuente)
+        dealer_upcard = "10 Spades"
 
     dealer = _dealer_value(dealer_upcard)
     total  = hand_total(player_cards)
@@ -108,7 +109,7 @@ def suggest_action_with_ev(
 
     El EV se devuelve como dict {"STAND": 0.12, "HIT": -0.04, "DOUBLE": ...}.
     """
-    if len(player_cards) < 2 or dealer_upcard is None:
+    if len(player_cards) < 2:
         return "WAIT", None
 
     # Las parejas se siguen rigiendo por la tabla porque el EV de SPLIT
@@ -119,9 +120,13 @@ def suggest_action_with_ev(
     if deck_tracker is None:
         return suggest_action(player_cards, dealer_upcard), None
 
-    from game.ev_calculator import evaluate, best_action
+    from game.ev_calculator import evaluate, evaluate_unknown_dealer, best_action
 
-    evs = evaluate(player_cards, dealer_upcard, deck_tracker, can_double=True)
+    if dealer_upcard is None:
+        evs = evaluate_unknown_dealer(player_cards, deck_tracker, can_double=True)
+    else:
+        evs = evaluate(player_cards, dealer_upcard, deck_tracker, can_double=True)
+
     if not evs:
         return suggest_action(player_cards, dealer_upcard), None
     return best_action(evs), evs

@@ -145,34 +145,6 @@ function updateUI(state) {
   // Marcador
   updateScoreboard(state.score);
 
-  // Conteo
-  const c    = state.counting || {};
-  const deck = state.deck     || {};
-  const rc = c.running_count ?? 0;
-  const tc = c.true_count    ?? 0;
-
-  const countTitle = document.getElementById("count-title");
-  if (countTitle) countTitle.textContent = "Conteo Hi-Lo";
-
-  const rcEl = document.getElementById("running-count");
-  if (rcEl) {
-    rcEl.textContent = rc > 0 ? `+${rc}` : rc;
-    rcEl.className   = rc > 0 ? "positive" : rc < 0 ? "negative" : "";
-  }
-  setText("true-count",      tc >= 0 ? `+${tc.toFixed(1)}` : tc.toFixed(1));
-  setText("decks-remaining", (c.decks_remaining ?? 0).toFixed(1));
-  setText("cards-seen",      `${c.cards_seen ?? 0}` + (deck.total_remaining ? ` / ${deck.total_remaining + (c.cards_seen||0)}` : ""));
-
-  // Barra de ventaja
-  const fill = document.getElementById("adv-bar-fill");
-  if (fill) {
-    const pct = Math.min(Math.max((tc + 6) / 12, 0), 1) * 100;
-    fill.style.width = pct + "%";
-    fill.style.background =
-      tc >= 2  ? "#4ade80" :
-      tc <= -2 ? "#f87171" : "#94a3b8";
-  }
-
   // Mesa
   const container = document.getElementById("players-container");
   container.innerHTML = "";

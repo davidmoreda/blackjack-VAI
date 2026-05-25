@@ -10,7 +10,10 @@
       "Bash(git rm *)",
       "Bash(rmdir comparison_runs)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(Get-ChildItem -Recurse -Force)",
+      "Bash(Select-Object -First 100)",
+      "Bash(Format-Table FullName)"
     ]
   }
 }
