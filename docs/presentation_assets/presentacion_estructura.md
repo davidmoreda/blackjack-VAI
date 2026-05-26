@@ -1,8 +1,9 @@
 # Estructura Presentación — BlackjackVAI
+> Modo historia: cada diapositiva narra una decisión, un problema encontrado y cómo se resolvió.
 
 ---
 
-## BLOQUE 1 — EXPLICACIÓN DEL JUEGO Y PROYECTO
+## BLOQUE 1 — INTRODUCCIÓN
 
 ---
 
@@ -12,414 +13,438 @@
 **Subtítulo:** Sistema de visión artificial para blackjack en tiempo real
 **Autores:** Carlos Díaz · David Moreda · Javier Cerón
 **Contexto:** Máster en IA — Visión Artificial Avanzada — 2026
-**Elementos visuales:**
-- Fondo estilo tapete de casino (verde oscuro #0b1a0e, detalles dorados)
-- Logo o icono de cartas sobre mesa
-
-**Notas del ponente:**
-> Presentamos BlackjackVAI, un sistema completo de visión artificial que detecta cartas en una mesa de blackjack en tiempo real usando una webcam cenital y sugiere la jugada óptima calculando el Valor Esperado sobre la composición real del zapato.
-
----
-
-### Diapositiva 2 — El proyecto
-
-**Título:** El proyecto
-
-**Contenido — qué hace el sistema (bullet list):**
-- Reconoce **54 clases** (52 cartas + dorso + Joker)
-- Sigue turnos automáticamente (jugador → dealer → fin de ronda)
-- Lleva el marcador (rondas ganadas / perdidas / empates)
-- Sugiere la **jugada óptima** en cada turno mediante Valor Esperado (EV)
-
-**Contenido — qué es el Blackjack (columna o bloque secundario):**
-- Objetivo: acercarse a 21 sin pasarse, superando al croupier
-- Acciones del jugador: **HIT** · **STAND** · **DOUBLE** · **SPLIT**
-- El dealer sigue reglas fijas: pide carta hasta llegar a 17+
-- Un error de clasificación cambia completamente el consejo de jugada → la precisión del modelo es crítica
 
 **Foto:** `docs/presentation_assets/Foto_cartas.png`
 
 **Notas del ponente:**
-> Esta slide ancla el proyecto: sabemos qué hace el sistema y por qué la precisión importa. Un 10 de corazones clasificado como J cambia el total de la mano y por tanto la recomendación.
+> Abrimos con la pregunta que nos hicimos al empezar el proyecto: ¿podemos poner una cámara encima de una mesa de blackjack y que el ordenador juegue mejor que nosotros?
 
 ---
 
-### Diapositiva 3 — Pipeline de visión artificial
+### Diapositiva 2 — El juego: Blackjack
 
-**Título:** De cámara a jugada en tiempo real
+**Título:** Blackjack
 
-**Diseño: 4 bloques grandes en horizontal con flechas entre ellos**
+**Historia:**
+Antes de hablar de visión artificial, necesitamos entender qué estamos resolviendo. El blackjack parece simple — llegar a 21 — pero la complejidad está en las decisiones: ¿pido carta con un 16 si el dealer tiene un 10? ¿Doblo con un 11? Estas decisiones tienen una respuesta matemáticamente óptima que depende de qué cartas quedan en el mazo. Eso es exactamente lo que nuestro sistema va a calcular en tiempo real.
 
-```
-[Cámara]  →  [Detección]  →  [Tracking]  →  [Decisión]
-```
+**Contenido:**
+- Objetivo: acercarse a 21 sin pasarse, superando al croupier
+- Valores: 2–10 numérico · figuras = 10 · As = 1 u 11
+- Acciones: **HIT** · **STAND** · **DOUBLE** · **SPLIT**
+- El dealer sigue reglas fijas: pide carta hasta llegar a 17+
 
-**Bloque 1 — Cámara**
-- Webcam cenital sobre la mesa
-- Captura continua del estado de la partida
-
-**Bloque 2 — Detección (YOLOv8m-seg)**
-- Localiza cada carta en el frame
-- Clasifica entre 54 clases posibles
-- Genera una máscara de segmentación por carta
-
-**Bloque 3 — Tracking (ByteTrack)**
-- Mantiene la identidad de cada carta entre frames
-- Evita registrar la misma carta múltiples veces
-
-**Bloque 4 — Decisión**
-- Asigna cada carta a su zona (dealer / jugador)
-- Calcula el Valor Esperado de cada acción posible
-- Recomienda HIT / STAND / DOUBLE
-
-**Elementos visuales:**
-- `docs/analysis/val/yolov8m_seg_v5/val_batch0_pred.jpg` — detecciones reales con máscaras y clases
+**Foto:** `docs/presentation_assets/Foto_cartas.png`
 
 **Notas del ponente:**
-> Todo el pipeline corre a 15 fps. El tracking es lo que permite que mover una carta no la registre dos veces. La decisión final no es una tabla fija — se recalcula en cada frame con las cartas que quedan en el zapato.
+> La clave de esta slide es que la detección debe ser precisa: un 10 clasificado como J no cambia el total, pero un 6 clasificado como 9 sí cambia completamente el consejo de jugada.
 
 ---
 
-## BLOQUE 2 — DATASET
+### Diapositiva 3 — El proyecto
+
+**Título:** El proyecto
+
+**Historia:**
+La idea era construir un sistema completo, no solo un clasificador de cartas. Queríamos que el sistema entendiese el estado de la partida, llevase la cuenta de quién tiene qué, y en cada momento dijese qué hacer. Todo eso con una webcam normal encima de la mesa.
+
+**Contenido:**
+- Reconoce **54 clases** (52 cartas + dorso + Joker)
+- Sigue turnos automáticamente: jugador → dealer → fin de ronda
+- Lleva el marcador: rondas ganadas / perdidas / empates
+- Sugiere la **jugada óptima** en cada turno mediante Valor Esperado (EV)
+
+**Foto:** `docs/presentation_assets/Foto_cartas.png`
+
+**Notas del ponente:**
+> Lo que diferencia este proyecto de un clasificador de imágenes es el sistema completo: visión + lógica de juego + interfaz. Cada pieza depende de la anterior.
 
 ---
 
-### Diapositiva 4 — El dataset: visión general
+### Diapositiva 4 — Arquitectura del sistema
 
-**Título:** El dataset: punto de partida
+**Título:** Arquitectura del sistema
 
-**Contenido (columna izquierda — qué tenemos):**
-- Fuente: **Roboflow** — plataforma de datasets de CV con anotaciones ya hechas
-- **54 clases**: As, 2–10, J, Q, K × 4 palos + reverso + joker
-- Anotaciones en formato YOLO (bounding boxes)
-- Split estándar: train / valid / test
+**Historia:**
+Desde el principio separamos el sistema en capas para que cada parte pudiese evolucionar de forma independiente. Si cambiamos el modelo de detección, la lógica del juego no se toca. Si cambiamos las reglas del EV, la cámara no se toca.
 
-**Contenido (columna derecha — los problemas generales):**
-- Las imágenes son de **estudio controlado**, no de mesa real con webcam
-- Iluminación uniforme, fondo neutro → el modelo no generaliza bien a condiciones reales
-- Solo bounding boxes → sin información de forma (las cartas se solapan)
-- Necesitamos iterar el dataset para acercarlo a nuestro caso de uso real
+**Las cuatro capas:**
+
+```
+[CÁMARA]      Webcam sobre la mesa — captura continua del estado de la partida
+     ↓
+[DETECCIÓN]   YOLOv8m-seg — detecta y clasifica cada carta, genera máscara de segmentación
+     ↓
+[TRACKING]    ByteTrack — mantiene la identidad de cada carta entre frames,
+              evita registrar la misma carta múltiples veces
+     ↓
+[JUEGO]       Almacena jugadas, calcula EV, recomienda acciones — interfaz web
+```
+
+**Foto:** `docs/analysis/val/yolov8m_seg_v5/val_batch0_pred.jpg`
+
+**Notas del ponente:**
+> Esta separación en capas fue una decisión de diseño clave. Nos permitió iterar el dataset y el modelo sin tocar nada del motor de juego, y viceversa.
+
+---
+
+## BLOQUE 2 — EL DATASET
+
+---
+
+### Diapositiva 5 — El punto de partida: qué necesitamos
+
+**Título:** Dataset — el punto de partida
+
+**Historia:**
+Lo primero que nos preguntamos fue: ¿de dónde sacamos datos? Necesitábamos imágenes de cartas anotadas con 54 clases, en condiciones similares a una mesa real con webcam. Fotografiar todo a mano era inviable. La solución fue Roboflow — una plataforma de datasets de visión artificial donde encontramos un dataset de cartas ya etiquetado con el split hecho.
+
+**Contenido:**
+- **54 clases**: 52 cartas + dorso + Joker
+- Alta variabilidad: ángulo, luz, cartas parcialmente cubiertas
+- Fuente: **Roboflow** — dataset ya etiquetado, split 80% train / 20% val
+- Anotaciones en formato YOLO
+
+**El problema de fondo que ya intuíamos:**
+Las imágenes son de estudio controlado, no de mesa real. Hay un gap entre el dominio de entrenamiento y el de inferencia que vamos a tener que cerrar versión a versión.
 
 **Foto:** `docs/analysis/val/yolov8m_seg_v5/val_batch0_labels.jpg`
 
 **Notas del ponente:**
-> El dataset base existe y está bien anotado, pero hay un gap importante entre las condiciones del dataset y las condiciones reales de una partida con webcam en una habitación. Todo el proceso de evolución del dataset busca cerrar ese gap.
+> Roboflow nos dio una base sólida para empezar rápido. El reto real no era conseguir imágenes, era conseguir que el modelo entrenado con esas imágenes funcionase con nuestra webcam en condiciones reales.
 
 ---
 
-### Diapositiva 5 — Intento previo: SAM para segmentación automática
+### Diapositiva 6 — Intento previo: SAM para segmentación automática
 
-**Título:** Antes de Roboflow: probamos SAM
+**Título:** SAM para segmentación automática
 
-**Contenido (columna izquierda — qué es y qué hicimos):**
-- **SAM** (Segment Anything Model, Meta AI): segmenta cualquier objeto dado un punto o bounding box como prompt, sin entrenamiento específico
-- Idea: usarlo para generar **máscaras de segmentación automáticas** sobre un dataset de cartas de Kaggle (2.757 imágenes con anotaciones Pascal VOC)
-- Pipeline implementado:
-  1. Parsear bounding boxes del XML de Kaggle
-  2. Usar el **centro de cada bbox como punto prompt** para SAM
-  3. SAM genera 3 máscaras candidatas → elegimos la de **mayor área** (la carta completa)
-  4. Convertir a formato COCO JSON → subir a Roboflow
-- Resultado: **2.757 imágenes procesadas, 0 errores**, ZIP listo para Roboflow
+**Historia:**
+Antes de centrarnos en Roboflow, exploramos si podíamos generar nuestros propios datos de segmentación automáticamente. Encontramos un dataset de Kaggle con 2.757 imágenes de cartas etiquetadas con bounding boxes, pero sin máscaras de segmentación. La idea: usar SAM (Segment Anything Model de Meta) para generar los contornos automáticamente y así tener un dataset de segmentación sin anotar a mano.
 
-**Contenido (columna derecha — por qué no lo usamos):**
-- SAM segmenta bien, **pero no clasifica** → las etiquetas de clase hay que añadirlas igualmente
-- El dataset de Kaggle tiene clases en formato distinto (`AS`, `10C`) que hay que mapear manualmente
-- El dataset de Roboflow ya tenía las 54 clases correctamente etiquetadas y en formato YOLO nativo
-- Coste de integración > beneficio obtenido
+**Cómo funcionó:**
+1. Parseamos los bounding boxes del XML de Kaggle
+2. Usamos el **centro de cada bbox como point prompt** para SAM
+3. SAM genera 3 máscaras candidatas → elegimos la de **mayor área** (la carta completa)
+4. La **clase la tomamos del XML de Kaggle** — SAM solo aporta el contorno, no sabe qué carta es
+5. Exportamos a formato COCO JSON → ZIP listo para subir a Roboflow
+- Resultado: **2.757 imágenes procesadas, 0 errores**
 
-**Foto:** screenshot del notebook mostrando el overlay de máscara SAM sobre una carta (punto prompt en rojo + máscara cyan)
+**Por qué no lo usamos al final:**
+El dataset de Roboflow ya tenía las 54 clases correctamente etiquetadas en formato YOLO nativo. SAM añadía el contorno pero el coste de integración era mayor que el beneficio frente a lo que ya teníamos.
+
+**Foto:** captura del notebook mostrando overlay SAM — máscara cyan + punto prompt rojo sobre carta
 
 **Notas del ponente:**
-> Fue un experimento valioso: aprendimos cómo funciona SAM con point prompts y construimos un pipeline completo de anotación semi-automática. Pero al final Roboflow nos daba lo mismo con menos fricción y ya con las clases correctas.
+> Fue un experimento valioso: aprendimos cómo funciona SAM con point prompts y construimos un pipeline de anotación semi-automática completo. Pero al final Roboflow resolvía el mismo problema con menos fricción.
 
 ---
 
-### Diapositiva 6 — Dataset V1: primera toma de contacto
+### Diapositiva 7 — V1 y V2: aprender a base de errores
 
-**Título:** V1 — Primera versión: ~10.500 imágenes
+**Título:** Dataset V1 y V2 — los primeros intentos
 
-**Lo que trae:**
-- Dataset grande (~10.506 imágenes) descargado directamente de Roboflow
-- Muchas imágenes → aparentemente un buen punto de partida
+**Historia V1:**
+Empezamos con el dataset más grande que encontramos: ~10.500 imágenes. Entrenamos, y el modelo no funcionaba con nuestra webcam. Al investigar descubrimos el problema: las imágenes estaban en **escala de grises** y habían sido generadas con *image tiling* — partir fotos de alta resolución en tiles más pequeños. El modelo había aprendido a ver fragmentos de cartas en gris, no cartas completas en color. Tuvimos que descartarlo entero.
 
-**El problema que genera:**
-- Las imágenes están en **escala de grises** y con técnica de *image tiling* (imágenes grandes partidas en tiles)
-- El modelo entrenado **no funciona con nuestra webcam en color**
-- Dominio de entrenamiento ≠ dominio de inferencia → fallo total
+**Historia V2:**
+Volvemos a Roboflow y descargamos un dataset diferente: 3.741 imágenes en color, completas, sin tiling. Pero esta vez no entrenamos — al revisar el dataset vimos que no tenía ninguna augmentation aplicada. Con tan poco dato y sin augmentations, el modelo iba a memorizar las condiciones exactas del dataset y fallar en cualquier variación real. Pasamos directamente a V3.
 
-**Foto:** ejemplo de imagen del dataset V1 (escala de grises, aspecto de tile)
+**Contenido:**
+| | V1 | V2 |
+|---|---|---|
+| Imágenes | ~10.500 | ~3.741 |
+| Problema | Escala de grises + tiling | Sin augmentations |
+| Decisión | ❌ Descartada | ❌ No entrenada |
+
+**Foto:** `docs/presentation_assets/v1_tiling_explicacion.png`
 
 **Notas del ponente:**
-> Este es el error clásico de no revisar el dataset antes de entrenar. 10k imágenes inútiles porque el dominio no coincide. Nos costó un ciclo de entrenamiento completo descubrirlo.
+> V1 es el error clásico de no revisar el dataset antes de entrenar. V2 es la decisión correcta de no perder tiempo entrenando algo que ya sabíamos que iba a fallar.
 
 ---
 
-### Diapositiva 7 — Dataset V2: reset y vuelta a empezar
+### Diapositiva 8 — V3 y V4: acercándonos al caso real
 
-**Título:** V2 — Reset: ~3.700 imágenes en color
+**Título:** Dataset V3 y V4 — augmentations para el mundo real
 
-**Lo que trae:**
-- Nuevo dataset limpio desde Roboflow: **~3.741 imágenes en color**
-- Imágenes completas (sin tiling), condiciones más variadas
-- Compatible con webcam en color
+**Historia V3:**
+Con V2 como base añadimos las augmentations estándar de YOLO: rotaciones, flips, cambios de brillo y contraste. Entrenamos 100 epochs y llegamos a **mAP50 = 0.954** — el primer modelo que realmente funcionaba. Pero al probarlo en la mesa real, las cartas alejadas de la cámara se detectaban mal. El modelo había aprendido cartas a una distancia fija, no a distancias variables.
 
-**El problema que genera:**
-- **Sin augmentations de ningún tipo**
-- El modelo vería siempre las cartas en las mismas condiciones → overfitting esperado
-- Poca robustez a variaciones de luz, rotación o distancia
-- Decisión: no entrenar con V2, pasar directamente a V3 con augmentations
+**Historia V4:**
+El problema estaba claro: necesitábamos que el modelo viese cartas a distintas escalas durante el entrenamiento. Añadimos augmentations agresivas orientadas a distancia — variaciones de escala fuertes, letterbox preprocessing — y arrancamos V4 como fine-tune desde V3. El mAP50 subió a **0.984**, el mejor resultado hasta ahora. Pero el dataset seguía siendo el mismo de 3.741 imágenes — poca diversidad para casos muy adversos.
 
-**Foto:** `docs/analysis/val/yolov8m_seg_v5/val_batch0_labels.jpg` *(dataset en color, estructura limpia)*
-
-**Notas del ponente:**
-> V2 es el dataset correcto pero sin tratar. Sabíamos que sin augmentations el modelo iba a memorizar en lugar de generalizar, así que no perdimos tiempo entrenando.
-
----
-
-### Diapositiva 8 — Dataset V3: baseline funcional
-
-**Título:** V3 — Primer modelo funcional: augmentations estándar
-
-**Lo que trae:**
-- Mismas ~3.741 imágenes que V2
-- **Augmentations estándar de YOLO**: rotaciones, flips, cambios de brillo y contraste
-- Primer modelo entrenado que realmente funciona → **mAP50: 0.954**
-
-**El problema que genera:**
-- El modelo funciona bien en validación, pero **falla con cartas a distancia** (webcam cenital real)
-- Las augmentations estándar no cubren variaciones de escala extremas ni desenfoque
-- La cámara real produce imágenes con menos contraste y algo de blur que el dataset no contempla
+**Contenido:**
+| | V3 | V4 |
+|---|---|---|
+| Base | 3.741 imágenes | 3.741 imágenes |
+| Nuevo | Augmentations YOLO estándar | Augmentations agresivas de escala |
+| Entrenamiento | Desde cero, 100 epochs | Fine-tune desde V3, 120 epochs |
+| mAP50 | 0.954 | 0.984 |
+| Problema | Falla con cartas lejanas | Dataset aún pequeño |
 
 **Foto:** `docs/analysis/val/yolov8m_seg_v5/val_batch1_labels.jpg`
 
 **Notas del ponente:**
-> mAP50 de 0.954 es un resultado sólido en papel, pero al probarlo en la mesa real los errores eran evidentes con cartas alejadas o bajo iluminación de habitación. Hay que acercar el dataset a las condiciones reales.
+> V3 a V4 es el salto de "funciona en validación" a "funciona un poco mejor en el mundo real". El problema que queda ya no es el modelo sino la cantidad y variedad de los datos.
 
 ---
 
-### Diapositiva 9 — Dataset V4: augmentations agresivas
+### Diapositiva 9 — V5 y V6: el dataset de producción
 
-**Título:** V4 — Augmentations agresivas para el caso real
+**Título:** Dataset V5 y V6 — triplicar los datos con Albumentations
 
-**Lo que trae:**
-- Mismo dataset base (~3.741 imágenes)
-- **Augmentations agresivas** orientadas a distancia y condiciones reales:
-  - Letterbox preprocessing (mantiene aspecto al redimensionar)
-  - Escala variable (simula cartas más lejos o más cerca)
-  - Blur moderado, variaciones de contraste fuertes
-- Fine-tune desde V3 (aprovecha lo aprendido)
-- **mAP50: 0.984** — mejor resultado hasta ahora
+**Historia:**
+El cuello de botella ya no era el modelo ni las augmentations en entrenamiento — era que 3.741 imágenes son pocas para cubrir toda la variabilidad real. La solución: triplicar el dataset *offline* usando **Albumentations**, generando versiones sintéticas de cada imagen que simulen las condiciones más difíciles de una webcam real.
 
-**El problema que genera:**
-- El dataset sigue siendo de tamaño limitado (~3.7k imágenes)
-- En condiciones muy adversas (luz tenue, cámara de baja calidad) sigue habiendo errores
-- Necesitamos más diversidad de datos, no solo más augmentations en tiempo de entrenamiento
+**Las tres transformaciones clave:**
+- **Gaussian Blur** → simula cámara de baja resolución o cartas fuera de foco
+- **JPEG Compression** → simula artefactos de cámara barata o stream de vídeo
+- **CLAHE** → simula variaciones de iluminación real: contraluz, sombras, luz tenue
 
-**Foto:** `docs/analysis/val/yolov8m_seg_v6/val_batch0_pred.jpg`
+Con esto pasamos de 3.741 a **7.722 imágenes** de entrenamiento.
+
+**V5 vs V6:**
+- **V5** — fine-tune desde V4 (aprovecha lo aprendido): mAP50 = 0.980
+- **V6** — entrenamiento desde cero con el dataset triplicado: **mAP50 = 0.986, mAP50-95 = 0.980** → modelo de producción
+
+El mAP50 de V5 baja ligeramente respecto a V4 (0.980 vs 0.984) pero la robustez en webcam real mejora significativamente. V6 cierra ese gap arrancando desde cero con más datos.
+
+**Foto:** `docs/presentation_assets/01_evolucion_modelos.png`
 
 **Notas del ponente:**
-> V4 sube el mAP50 a 0.984, el mejor en validación de toda la serie. Pero el cuello de botella ya no es el modelo sino la cantidad y variedad de datos de entrenamiento.
+> La caída de mAP50 en V5 respecto a V4 no es un problema — es el modelo siendo más honesto. V4 estaba algo sobreajustado al dominio del dataset. V6 es el que está corriendo en la app.
 
 ---
 
-### Diapositiva 10 — Dataset V5: triplicar los datos con Albumentations
-
-**Título:** V5 — Dataset de producción: 7.722 imágenes
-
-**Lo que trae:**
-- Dataset V4 **triplicado offline** con la librería **Albumentations**:
-  - **Gaussian Blur** → simula cartas fuera de foco o cámara de baja resolución
-  - **JPEG Compression** → simula artefactos de cámara barata
-  - **CLAHE** → simula variaciones de iluminación real (contraluz, sombras)
-- Resultado: **7.722 imágenes** de entrenamiento (vs 3.741 anteriores)
-- Fine-tune desde V4
-- **mAP50: 0.980 · mAP50-95: 0.980**
-
-**El resultado:**
-- mAP50 baja ligeramente en validación (0.984 → 0.980) pero la **robustez en webcam real mejora significativamente**
-- El modelo aguanta mejor condiciones adversas de iluminación y cámara
-- Este es el modelo que va a producción
-
-**Foto:** `docs/presentation_assets/01_evolucion_modelos.png` *(gráfica de evolución de mAP a lo largo de versiones)*
-
-**Notas del ponente:**
-> La ligera caída en mAP50 de V5 respecto a V4 no es un problema — es el modelo siendo más honesto. V4 estaba algo sobreajustado al dominio del dataset; V5 generaliza mejor aunque la métrica de validación sea un poco inferior.
+## BLOQUE 3 — DETECCIÓN, JUEGO Y WEB
 
 ---
 
----
+### Diapositiva 10 — Cómo evitamos los falsos positivos
 
-## BLOQUE 3 — EL JUEGO Y LA APLICACIÓN WEB
+**Título:** Detección y tracking — cómo evitamos los falsos positivos
 
----
+**Historia:**
+El modelo detecta a 15 fps. Sin ningún control, una carta que alguien mueve por la mesa se registraría docenas de veces. Una carta en tránsito entre zonas contaminaría el estado del juego. Necesitábamos tres capas de protección antes de que una detección se convirtiera en una carta registrada.
 
-### Diapositiva 11 — Cómo evitamos los falsos positivos
+**Las tres capas:**
 
-**Título:** El problema: una carta no es una detección
-
-**Contenido (izquierda — el problema):**
-- El modelo detecta cartas en cada frame: 15 veces por segundo
-- Una carta que pasa por encima de una zona se detectaría y registraría instantáneamente
-- Una misma carta puede aparecer en múltiples frames con IDs distintos si no hay tracking
-- Resultado sin control: el juego se llenaría de cartas fantasma
-
-**Contenido (derecha — las tres capas de protección):**
-
-**1. ByteTrack — identidad estable entre frames**
-- Asigna un ID único a cada carta y lo mantiene aunque la carta se mueva
-- Si la misma carta aparece en los frames 1, 2 y 3 → siempre es el mismo ID
-- Evita contar la misma carta varias veces por movimiento
+**1. ByteTrack + filtro de Kalman — identidad estable**
+Asigna un ID único a cada carta y lo mantiene aunque YOLO falle un frame o la carta se mueva. Elimina el parpadeo sin crear cartas fantasma.
 
 **2. Zonas configurables**
-- La mesa está dividida en regiones: dealer, jugador 1, jugador 2
-- Una carta solo se considera si está dentro de una zona reconocida
-- Las zonas se definen en coordenadas normalizadas en `config.yaml`
+La mesa está dividida en regiones: dealer, jugador 1, jugador 2. Solo se considera una detección si está dentro de una zona reconocida. Configurables en `config.yaml`.
 
 **3. Debouncer — 1 segundo de presencia continua**
-- Una carta no se registra al detectarse: debe permanecer en la misma zona durante **≥ 1 segundo**
-- Si sale antes de ese tiempo → se descarta (carta en tránsito, mano que pasa)
-- La barra de progreso bajo cada bbox en la UI muestra el tiempo acumulado
+Una carta no se registra al detectarse: debe permanecer en la misma zona durante **≥ 1 segundo**. Si sale antes → se descarta. La barra de progreso bajo cada bbox en la UI muestra el tiempo acumulado.
 
-**Foto:** `docs/analysis/val/yolov8m_seg_v5/val_batch0_pred.jpg` *(detecciones con bboxes y máscaras — ilustra el tracking visual)*
+**Resultado:** cada carta se registra exactamente una vez por mano, independientemente de los FPS.
+
+**Foto:** `docs/analysis/val/yolov8m_seg_v5/val_batch0_pred.jpg`
 
 **Notas del ponente:**
-> Estas tres capas trabajan en orden: ByteTrack garantiza que es la misma carta, las zonas garantizan que está en el sitio correcto, y el debouncer garantiza que lleva suficiente tiempo para ser una carta real de la mano y no una que alguien está moviendo.
+> El debouncer es la pieza más importante de robustez del sistema. Sin él, cualquier movimiento de mano sobre la mesa contaminaría el estado del juego. Con él, solo cuenta lo que realmente se está jugando.
 
 ---
 
-### Diapositiva 12 — Lógica del juego y recomendación por EV
+### Diapositiva 11 — Lógica del juego y recomendación por EV
 
-**Título:** Del estado de la mesa a la jugada óptima
+**Título:** Juego y web — de la detección a la jugada óptima
 
-**Contenido (izquierda — la máquina de estados):**
-- El juego sigue una **máquina de estados finita**:
-  ```
-  WAITING → DEALING → PLAYER_TURN → DEALER_TURN → ROUND_END
-  ```
-- Cada carta confirmada actualiza el estado: a quién le toca, cuánto suma cada mano
-- El `DeckTracker` descuenta cada carta vista del zapato → sabe exactamente qué queda
+**Historia:**
+Una vez que una carta se confirma, entra en la máquina de estados del juego. El sistema sabe en qué fase está la ronda, de quién es el turno, y cuánto suma cada mano. Con esa información y sabiendo exactamente qué cartas quedan en el zapato, calcula el Valor Esperado de cada acción posible.
 
-**Contenido (derecha — el cálculo de EV):**
-- Para cada turno del jugador se calculan 3 EVs:
-  - **EV STAND**: simula todos los desenlaces posibles del dealer ponderados por probabilidad
-  - **EV HIT**: recursivo — evalúa cada carta que puede llegar y elige el mejor sub-estado
-  - **EV DOUBLE**: igual que HIT pero apuesta ×2, solo una carta más
-- Si el dealer aún no ha puesto carta: el EV se promedia sobre todos los valores posibles del zapato
-- Se recomienda la acción con **mayor EV**
-- Convención: **+1.0** = ganar una unidad · **0** = empate · **−1.0** = perder
+**Cómo funciona el EV:**
+El programa cuenta todas las cartas que han aparecido y sabe qué queda en el zapato. Para cada turno calcula:
+- **EV STAND**: simula todos los desenlaces posibles del dealer ponderados por probabilidad
+- **EV HIT**: recursivo — evalúa cada carta que puede llegar y elige el mejor sub-estado
+- **EV DOUBLE**: igual que HIT pero apuesta ×2, solo una carta más
 
-**Ejemplo concreto:**
-| Situación | EV STAND | EV HIT | EV DOUBLE | Recomendación |
-|-----------|----------|--------|-----------|---------------|
-| Mano 16 vs dealer 10 | −0.54 | −0.48 | — | **HIT** |
-| Mano 11 vs dealer 6 | +0.18 | +0.34 | +0.58 | **DOUBLE** |
+Se recomienda la acción con mayor EV. Si el dealer aún no tiene carta, el EV se promedia sobre todos los valores posibles del zapato.
+
+**Ejemplo:**
+| Situación | EV STAND | EV HIT | Recomendación |
+|-----------|----------|--------|---------------|
+| Mano 16 vs dealer 10 | −0.54 | −0.48 | **HIT** |
+| Mano 11 vs dealer 6 | +0.18 | +0.34 | **DOUBLE** |
 
 **Foto:** `docs/presentation_assets/02_metricas_finales.png`
 
 **Notas del ponente:**
-> El EV no es una tabla fija — se recalcula en cada frame con las cartas que quedan en el zapato. Conforme avanza la partida y salen cartas, las probabilidades cambian y la recomendación puede cambiar también. Es matemáticamente óptimo dado el estado conocido del zapato.
+> El EV no es una tabla fija — se recalcula en cada frame con las cartas que quedan. Conforme avanza la partida y salen cartas, las probabilidades cambian y la recomendación puede cambiar también.
 
 ---
 
-### Diapositiva 13 — La aplicación web
+### Diapositiva 12 — La aplicación web
 
-**Título:** Interfaz web en tiempo real
+**Título:** La aplicación web
 
-**Contenido (columna izquierda — qué ve el usuario):**
-- Interfaz web con temática de casino (tapete verde, detalles dorados)
-- Feed de vídeo en vivo con las detecciones superpuestas (bboxes + máscaras + barra de debounce)
-- Panel lateral con:
-  - Marcador de la partida (dealer / jugador / empates)
-  - Recomendación de acción con los 3 EVs en tiempo real
-  - Mesa: cartas de cada jugador con totales
-  - Historial de cartas con opción de eliminar manualmente
-  - Controles: empezar partida, plantarse, nueva ronda, deshacer
+**Historia:**
+Montamos toda la lógica detrás de una interfaz web con FastAPI y Uvicorn. El usuario abre el navegador, apunta la cámara a la mesa y el sistema hace el resto: detecta las cartas, sigue la partida y muestra la recomendación actualizada en tiempo real.
 
-**Contenido (columna derecha — cómo se despliega):**
-- Backend: **FastAPI + Uvicorn** (ASGI, asíncrono)
-- Comunicación: **WebSocket** a 15 fps para el estado del juego + **MJPEG** a 30 fps para el vídeo
-- Aceleración: **PyTorch + CUDA** (GPU NVIDIA)
+**Qué ve el usuario:**
+- Feed de vídeo en vivo con detecciones superpuestas (bboxes + máscaras + barra de debounce)
+- Marcador de la partida y estado de cada mano
+- Recomendación de acción con los 3 EVs en tiempo real
+- Historial de cartas con opción de corrección manual
+
+**Cómo se despliega:**
+- Backend: **FastAPI + Uvicorn** — WebSocket a 15 fps para el estado + MJPEG a 30 fps para el vídeo
+- Aceleración: **PyTorch + CUDA**
 - Contenedores: **Docker + NVIDIA Container Toolkit**
-- Compatible con Windows nativo y WSL2
 
 ```
 Windows:
   python cam_server_windows.py   ← expone la webcam
   uvicorn api.main:app           ← servidor web
 
-WSL / Linux:
-  docker compose up --build      ← todo en un contenedor
+WSL / Docker:
+  docker compose up --build
 ```
 
-**Foto:** captura de pantalla de la interfaz web en funcionamiento *(hacer captura manual de `http://localhost:8080`)*
+**Foto:** captura de pantalla de la interfaz web en funcionamiento *(captura manual de localhost:8080)*
 
 **Notas del ponente:**
-> El WebSocket actualiza el panel lateral 15 veces por segundo — el usuario ve la recomendación cambiar en tiempo real según lo que detecta la cámara. El MJPEG es el stream de vídeo con las detecciones dibujadas encima.
+> El WebSocket actualiza el panel 15 veces por segundo. El usuario ve la recomendación cambiar en tiempo real según lo que detecta la cámara — no hay que pulsar nada.
 
 ---
 
----
-
-## BLOQUE 4 — CIERRE
+## BLOQUE 4 — MODELOS Y COMPARATIVA
 
 ---
 
-### Diapositiva 14 — Limitaciones y trabajos futuros
+### Diapositiva 13 — ¿Por qué un segundo modelo? RT-DETR
 
-**Título:** Limitaciones actuales y trabajos futuros
+**Título:** ¿Por qué un segundo modelo? RT-DETR
 
-**Contenido (izquierda — dónde el sistema todavía sufre):**
-- Cartas dobladas / sucias / manchadas no se han probado sistemáticamente
-- Zonas fijas en mesa — no detecta jugadores arbitrarios, asume layout pre-configurado en `config.yaml`
-- No re-identificación entre rondas — una carta que sale y vuelve al zapato cuenta como dos
+**Historia:**
+Teníamos YOLOv8m-seg funcionando bien, pero queríamos validar que era realmente la mejor opción y no solo la más cómoda. Decidimos entrenar RT-DETR-L — un transformer para detección en tiempo real — con exactamente la misma configuración: mismo dataset, misma resolución, mismo régimen de entrenamiento. Así la comparativa sería honesta.
 
-**Contenido (derecha — próximas iteraciones):**
-- **SPLIT con EV real** — modelar dos manos independientes en `ev_calculator.py` (actualmente usa tabla estática)
-- **Fine-tuning RT-DETR** — lr0 específico para objetos pequeños + más epochs para cerrar el gap con YOLOv8m-seg
-- Detección de layout automático — inferir zonas de la mesa sin configuración manual
+**Por qué RT-DETR y no otra YOLO:**
+RT-DETR es un paradigma diferente — transformer vs CNN — lo que hace la comparativa más interesante académicamente. Comparar dos YOLOs hubiera sido comparar versiones del mismo enfoque.
 
 **Foto:** `docs/presentation_assets/04_comparativa_inferencia.png`
 
 **Notas del ponente:**
-> Las limitaciones más importantes son las de dominio — la cámara fija y el layout conocido. En un casino real las manos se mezclan, las cartas se doblan y los jugadores se mueven. Ese es el salto que habría que dar en una siguiente versión.
+> La clave es "misma config". Si hubiéramos optimizado RT-DETR por separado podría haber ganado o perdido por razones ajenas al modelo. Así sabemos que las diferencias son del modelo, no del setup.
 
 ---
 
-### Diapositiva 15 — Conclusiones
+### Diapositiva 14 — Comparativa de modelos
+
+**Título:** Comparativa final — calidad + coste
+
+**Historia:**
+Los resultados hablan solos. Todos los modelos llegan al techo en mAP50, pero las diferencias aparecen en mAP50-95 (calidad de localización) y en FPS (velocidad de inferencia). YOLOv8m-seg V6 gana en ambas dimensiones.
+
+**Foto:** `docs/presentation_assets/03_modelo_produccion_v6.png`
+
+**Notas del ponente:**
+> mAP50 es fácil de saturar con 54 clases bien separadas visualmente. mAP50-95 es la métrica que de verdad mide la calidad de las máscaras de segmentación — ahí es donde V6 se separa de RT-DETR.
+
+---
+
+### Diapositiva 15 — Modelo de producción: V6
+
+**Título:** Modelo de producción — YOLOv8m-seg V6
+
+**Historia:**
+V6 es el resultado de todo el proceso: dataset triplicado, entrenamiento desde cero, early stopping. Es el modelo que está corriendo en la app. Las curvas de loss muestran convergencia limpia sin overfitting — train y val siguen la misma tendencia hasta el final.
+
+**Foto:** `docs/presentation_assets/09_v6_results_official.png`
+
+**Notas del ponente:**
+> V6 entrenado desde cero con el dataset triplicado supera a V5 fine-tuneado. El dataset más grande compensa el coste de no partir de pesos preentrenados.
+
+---
+
+## BLOQUE 5 — CIERRE
+
+---
+
+### Diapositiva 16 — ¿Qué hemos aportado?
+
+**Título:** ¿Qué hemos aportado?
+
+**Historia:**
+Más allá de los números, lo que hemos construido tiene valor por las decisiones que tomamos y por cerrar el ciclo completo.
+
+**Contenido:**
+- **Dataset propio de segmentación** — máscaras generadas con SAM sobre un dataset que solo tenía bounding boxes
+- **Augmentations para cámara real** — blur, ruido JPEG y low-light → ×3 datos de entrenamiento sin recolectar más imágenes
+- **Comparativa contra otra arquitectura** — RT-DETR-L (transformer), no otra YOLO — con la misma configuración para que sea objetiva
+- **Modelo elegido por métricas** — V6 gana en mAP, latencia y tamaño de modelo
+
+**Foto:** `docs/presentation_assets/08_v6_results_summary.png`
+
+**Notas del ponente:**
+> Lo más valioso es el proceso, no el número final. Cualquiera puede entrenar YOLOv8 con un dataset de Roboflow. Lo diferencial es haber iterado el dataset, comparado con un paradigma distinto y desplegado un sistema que funciona de verdad.
+
+---
+
+### Diapositiva 17 — Limitaciones y trabajos futuros
+
+**Título:** Limitaciones y trabajos futuros
+
+**Dónde el sistema todavía sufre:**
+- Cartas dobladas / sucias / manchadas — no probadas sistemáticamente
+- Zonas fijas — no detecta jugadores arbitrarios, asume layout pre-configurado
+- No re-identificación — una carta que sale y vuelve al zapato cuenta como dos
+
+**Próximas iteraciones:**
+- **SPLIT con EV real** — modelar dos manos independientes en `ev_calculator.py` (actualmente usa tabla estática)
+- **Fine-tuning RT-DETR** — lr0 específico para objetos pequeños + más epochs para cerrar el gap con V6
+- Detección automática del layout de la mesa
+
+**Foto:** `docs/presentation_assets/04_comparativa_inferencia.png`
+
+**Notas del ponente:**
+> Las limitaciones más importantes son las de dominio — layout fijo, cartas en buen estado. En una partida real los jugadores se mueven y las cartas se desgastan. Ese es el siguiente salto.
+
+---
+
+### Diapositiva 18 — Conclusiones
 
 **Título:** Conclusiones
 
-**Contenido — lo que hemos demostrado:**
+**Lo que hemos demostrado:**
 - **Pipeline completo end-to-end** — dataset → entrenamiento → comparativa → app funcional en producción
 - **Modelo robusto** — YOLOv8m-seg V6 con mAP50-95 = 0.98 sobre 54 clases
-- **Comparativa rigurosa CNN vs Transformer** — misma configuración de entrenamiento, métrica objetiva → YOLO gana en precisión y velocidad
+- **Comparativa rigurosa CNN vs Transformer** — misma configuración, métrica objetiva → YOLO gana en precisión y velocidad
 - **App real-time funcional** — WebSocket a 15 fps, recomendación por EV en tiempo real
 - **Reproducibilidad** — MLflow con 5 runs trazados, notebooks ejecutables
 
 **Foto:** `docs/presentation_assets/09_v6_results_official.png`
 
 **Notas del ponente:**
-> Lo más valioso del proyecto no es solo el mAP — es haber cerrado el ciclo completo: datos reales, entrenamiento con criterio, comparativa honesta y sistema desplegado que funciona con una webcam. Eso es lo que diferencia un experimento de un producto.
+> Lo que diferencia este proyecto de un experimento académico es que funciona: cámara, mesa, cartas, recomendación. El ciclo está cerrado.
 
 ---
 
-*— Fin de los Bloques 1, 2, 3 y 4 —*
+*— Fin —*
 
 ---
 
-## ÍNDICE DE RECURSOS GRÁFICOS DISPONIBLES
+## ÍNDICE DE RECURSOS GRÁFICOS
 
 | Slide | Recurso | Ruta |
 |-------|---------|------|
-| 4 | Batch con labels GT | `docs/analysis/val/yolov8m_seg_v5/val_batch0_labels.jpg` |
-| 5 | Screenshot SAM notebook | captura manual del notebook |
-| 6 | Tiling explicación | `docs/presentation_assets/v1_tiling_explicacion.png` |
-| 7 | Batch labels color | `docs/analysis/val/yolov8m_seg_v5/val_batch0_labels.jpg` |
+| 1 | Foto cartas reales | `docs/presentation_assets/Foto_cartas.png` |
+| 2 | Foto cartas reales | `docs/presentation_assets/Foto_cartas.png` |
+| 3 | Foto cartas reales | `docs/presentation_assets/Foto_cartas.png` |
+| 4 | Detecciones con máscaras | `docs/analysis/val/yolov8m_seg_v5/val_batch0_pred.jpg` |
+| 5 | Batch con labels GT | `docs/analysis/val/yolov8m_seg_v5/val_batch0_labels.jpg` |
+| 6 | Captura notebook SAM | captura manual del notebook |
+| 7 | Tiling explicación | `docs/presentation_assets/v1_tiling_explicacion.png` |
 | 8 | Batch labels V3 | `docs/analysis/val/yolov8m_seg_v5/val_batch1_labels.jpg` |
-| 9 | Predicciones V4/V6 | `docs/analysis/val/yolov8m_seg_v6/val_batch0_pred.jpg` |
-| 10 | Evolución modelos | `docs/presentation_assets/01_evolucion_modelos.png` |
-| 11 | Detecciones con tracking | `docs/analysis/val/yolov8m_seg_v5/val_batch0_pred.jpg` |
-| 12 | Métricas finales | `docs/presentation_assets/02_metricas_finales.png` |
-| 13 | Captura interfaz web | **captura manual de localhost:8080** |
-| 14 | Comparativa inferencia | `docs/presentation_assets/04_comparativa_inferencia.png` |
+| 9 | Evolución modelos | `docs/presentation_assets/01_evolucion_modelos.png` |
+| 10 | Detecciones con tracking | `docs/analysis/val/yolov8m_seg_v5/val_batch0_pred.jpg` |
+| 11 | Métricas finales | `docs/presentation_assets/02_metricas_finales.png` |
+| 12 | Captura interfaz web | **captura manual de localhost:8080** |
+| 13 | Comparativa inferencia | `docs/presentation_assets/04_comparativa_inferencia.png` |
+| 14 | Modelo producción V6 | `docs/presentation_assets/03_modelo_produccion_v6.png` |
 | 15 | Resultados oficiales V6 | `docs/presentation_assets/09_v6_results_official.png` |
+| 16 | Resumen resultados | `docs/presentation_assets/08_v6_results_summary.png` |
+| 17 | Comparativa inferencia | `docs/presentation_assets/04_comparativa_inferencia.png` |
+| 18 | Resultados oficiales V6 | `docs/presentation_assets/09_v6_results_official.png` |
